@@ -1,0 +1,599 @@
+services:
+  # Tailscale container for networking
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: vertuoza-platform-ts
+    hostname: vertuoza-platform-ubuntu
+    environment:
+      - TS_AUTHKEY=tskey-auth-khztQLEN6i11CNTRL-eW4hLGY2n9Dbh9qvYp5d9DbSpVYiNoCGb
+      - "TS_EXTRA_ARGS=--advertise-tags=tag:container --reset"
+      - TS_SERVE_CONFIG=/config/vertuoza-platform.json
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+    volumes:
+      - ./config:/config
+      - vertuoza-ts-state:/var/lib/tailscale
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+    restart: unless-stopped
+    networks:
+      - vertuoza-network
+
+  kernel:
+    platform: linux/amd64
+    image: ghcr.io/vertuoza/vertuo-backend-php/services/kernel:${KERNEL_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - APP_ENV=local
+      - APP_BASE_DOMAIN=${APP_URL}
+      - PORT=80
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=vertuoza_dvp
+      - DB_USERNAME=kernel
+      - DB_PASSWORD=kernel_password
+      - MODE=DEPLOYED
+      - LOG_ENABLED=true
+      - LOG_LEVEL=debug
+      - SECURE=true
+      - PHP_SESSION_EXPIRATION=240
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - VERTUO_FRONT_DOMAIN=${FRONT_URL}
+      #var for upload files on GCP
+      - FILE_STORAGE_HOST=${GCP_FILE_STORAGE_HOST}
+      - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
+      - GCP_BUCKET_CREDENTIALS=${GCP_BUCKET_CREDENTIALS}
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      - LEGACY_BUCKET=${GCP_LEGACY_BUCKET}
+      - SANDBOX_ACTIVE=true
+      #var for jwt auth
+      - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY}
+      - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY}
+      - JWT_EXP=${JWT_EXP}
+      - MEMORY_LIMIT=2048M
+      - WEATHER_OPENWHEATHER_API_KEY=${WEATHER_OPENWHEATHER_API_KEY}
+      - WEATHER_GOOGLE_MAPS_API_KEY=${WEATHER_GOOGLE_MAPS_API_KEY}
+      - GOOGLE_DISTANCE_MATRIX_API_KEY=${GOOGLE_DISTANCE_MATRIX_API_KEY}
+      - BREVO_WHITELIST_IP_RANGES=[["185.107.232.0", "185.107.232.255"],["1.179.112.0", "1.179.127.255"]]
+      - LAUNCH_DARKLY_SDK_KEY=${LAUNCH_DARKLY_SDK_KEY}
+      - LAUNCH_DARKLY_BASE_URI=${LAUNCH_DARKLY_BASE_URI:-}
+      - FEATURE_FLAGS_CACHE_LIFETIME=60
+      - FEATURE_FLAGS=use-launch-darkly=true
+      - HUBSPOT_TOKEN=${HUBSPOT_TOKEN}
+      - HUBSPOT_LIFECYCLE_PRODUCT=${HUBSPOT_LIFECYCLE_PRODUCT}
+      - BATIPRIX_SOFTWARE_API_KEY=${BATIPRIX_SOFTWARE_API_KEY}
+      - CEBEO_API_URL=${CEBEO_API_URL}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - CRON_SECRET=${CRON_SECRET}
+      - BATIPRIX_BASE_URL=${BATIPRIX_BASE_URL}
+      - OTEL_PHP_AUTOLOAD_ENABLED=${OTEL_PHP_AUTOLOAD_ENABLED:-false}
+      - OTEL_PHP_FIBERS_ENABLED=${OTEL_PHP_FIBERS_ENABLED:-false}
+      - OTEL_PHP_DISABLED_INSTRUMENTATIONS=${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-all}
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=vertuoza/kernel
+    depends_on:
+      kernel-migrations:
+        condition: service_completed_successfully
+      mysql:
+        condition: service_healthy
+    networks:
+      - vertuoza-network
+
+  kernel-migrations:
+    image: ghcr.io/vertuoza/vertuo-backend-php/services/kernel-migrations:${KERNEL_MIGRATIONS_VERSION:-latest}
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=vertuoza_dvp
+      - DB_USERNAME=kernel
+      - DB_PASSWORD=kernel_password
+      - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - vertuoza-network
+
+  client-space:
+    platform: linux/amd64
+    image: ghcr.io/vertuoza/vertuo-backend-php/services/client-space:${CLIENT_SPACE_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - APP_ENV=local
+      - APP_BASE_DOMAIN=${APP_URL}
+      - PORT=80
+      - MODE=DEPLOYED
+      - LOG_ENABLED=true
+      - LOG_LEVEL=debug
+      - SECURE=true
+      - ALLOWED_DOMAINS=${APP_URL}
+      - SANDBOX_ACTIVE=true
+      - MEMORY_LIMIT=2048M
+      - GATEWAY_URL=${GATEWAY_URL}
+      - THIRD_PARTY_JWT_PUBLIC_KEY=${CLIENT_SPACE_THIRD_PARTY_JWT_PUBLIC_KEY}
+      - THIRD_PARTY_JWT_ISSUER=${CLIENT_SPACE_THIRD_PARTY_JWT_ISSUER}
+      - THIRD_PARTY_JWT_AUDIENCE=${CLIENT_SPACE_THIRD_PARTY_JWT_AUDIENCE}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - OTEL_PHP_AUTOLOAD_ENABLED=${OTEL_PHP_AUTOLOAD_ENABLED:-false}
+      - OTEL_PHP_FIBERS_ENABLED=${OTEL_PHP_FIBERS_ENABLED:-false}
+      - OTEL_PHP_DISABLED_INSTRUMENTATIONS=${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-all}
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=vertuoza/client-space
+    networks:
+      - vertuoza-network
+
+  identity:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/vertuo-identity:${IDENTITY_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - APP_ENV=local
+      - APP_BASE_DOMAIN=${APP_URL}
+      - PORT=80
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=identity
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - XDEBUG_MODE=off
+      - XDEBUG_PORT=9003
+      - MODE=DEPLOYED
+      - LOG_ENABLED=true
+      - LOG_LEVEL=debug
+      - SECURE=true
+      - PHP_SESSION_EXPIRATION=240
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - SANDBOX_ACTIVE=true
+      - MEMORY_LIMIT=2048M
+      - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
+      - GATEWAY_URL=${GATEWAY_URL}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - OTEL_PHP_AUTOLOAD_ENABLED=${OTEL_PHP_AUTOLOAD_ENABLED:-false}
+      - OTEL_PHP_FIBERS_ENABLED=${OTEL_PHP_FIBERS_ENABLED:-false}
+      - OTEL_PHP_DISABLED_INSTRUMENTATIONS=${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-all}
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=vertuoza/vertuo-identity
+    depends_on:
+      identity-migrations:
+        condition: service_completed_successfully
+      mysql:
+        condition: service_healthy
+    networks:
+      - vertuoza-network
+
+  identity-migrations:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/vertuo-identity:${IDENTITY_VERSION:-latest}
+    command: php vendor/bin/phinx migrate
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=identity
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - vertuoza-network
+
+  auth:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/vertuo-auth:${AUTH_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - APP_ENV=local
+      - APP_BASE_DOMAIN=${APP_URL}
+      - PORT=80
+      - MODE=DEPLOYED
+      - LOG_ENABLED=true
+      - LOG_LEVEL=debug
+      - SECURE=true
+      - PHP_SESSION_EXPIRATION=240
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - SANDBOX_ACTIVE=true
+      - MEMORY_LIMIT=2048M
+      - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - XDEBUG_MODE=off
+      - XDEBUG_PORT=9003
+      - OTEL_PHP_AUTOLOAD_ENABLED=${OTEL_PHP_AUTOLOAD_ENABLED:-false}
+      - OTEL_PHP_FIBERS_ENABLED=${OTEL_PHP_FIBERS_ENABLED:-false}
+      - OTEL_PHP_DISABLED_INSTRUMENTATIONS=${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-all}
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=vertuoza/vertuo-auth
+    networks:
+      - vertuoza-network
+
+  # pdf-builder:
+  #   platform: linux/amd64
+  #   image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/pdf-builder:${PDF_BUILDER_VERSION:-latest}
+  #   extra_hosts:
+  #     - "host.docker.internal:host-gateway"
+  #   environment:
+  #     - NODE_ENV=production
+  #     - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/pdf_builder
+  #     - GRAPHQL_SANDBOX=true
+  #     - CORS_ORIGIN=${APP_URL}
+  #     - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+  #     - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
+  #     - GCP_CREDENTIALS_CLIENT_ID=${GCP_CREDENTIALS_CLIENT_ID:-}
+  #     - GCP_CREDENTIALS_CLIENT_EMAIL=${GCP_CREDENTIALS_CLIENT_EMAIL:-}
+  #     - GCP_CREDENTIALS_PRIVATE_KEY=${GCP_CREDENTIALS_PRIVATE_KEY:-}
+  #     - GCP_CREDENTIALS_TYPE=${GCP_CREDENTIALS_TYPE:-}
+  #     - INTERNAL_SECRET=${INTERNAL_SECRET}
+  #     - OTEL_ENABLED=${OTEL_ENABLED:-0}
+  #     - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+  #     - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+  #     - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
+  #     - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+  #     - OTEL_SERVICE_NAME=vertuoza/pdf-builder
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     pdf-builder-migrations:
+  #       condition: service_completed_successfully
+  #   networks:
+  #     - vertuoza-network
+
+  # pdf-builder-migrations:
+  #   platform: linux/amd64
+  #   image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/pdf-builder-migrations:${PDF_BUILDER_VERSION:-latest}
+  #   environment:
+  #     - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/pdf_builder
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   networks:
+  #     - vertuoza-network
+
+  work:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/vertuo-work:${WORK_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - APP_ENV=local
+      - APP_BASE_DOMAIN=${APP_URL}
+      - PORT=80
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=work
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - XDEBUG_MODE=off
+      - XDEBUG_PORT=9003
+      - MODE=DEPLOYED
+      - LOG_ENABLED=true
+      - LOG_LEVEL=debug
+      - SECURE=true
+      - PHP_SESSION_EXPIRATION=240
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - SANDBOX_ACTIVE=true
+      - MEMORY_LIMIT=2048M
+      - EMAIL_BREVO_API_KEY=${EMAIL_BREVO_API_KEY}
+      - GATEWAY_URL=${GATEWAY_URL}
+      - SENDER_EMAIL=${SENDER_EMAIL}
+      - VERTUO_SOFT_URL=${VERTUO_SOFT_URL}
+      - SLACK_WEBHOOK_URL=${WORK_SLACK_WEBHOOK_URL}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - OTEL_PHP_AUTOLOAD_ENABLED=${OTEL_PHP_AUTOLOAD_ENABLED:-false}
+      - OTEL_PHP_FIBERS_ENABLED=${OTEL_PHP_FIBERS_ENABLED:-false}
+      - OTEL_PHP_DISABLED_INSTRUMENTATIONS=${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-all}
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=vertuoza/vertuo-work
+    depends_on:
+      work-migrations:
+        condition: service_completed_successfully
+      mysql:
+        condition: service_healthy
+    networks:
+      - vertuoza-network
+
+  work-migrations:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/vertuo-work:${WORK_VERSION:-latest}
+    command: php vendor/bin/phinx migrate
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=work
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - vertuoza-network
+
+  ai:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/vertuo-ai:${VERTUO_AI_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/vertuo_ai
+      - GRAPHQL_SANDBOX=true
+      - CORS_ORIGIN=${APP_URL}
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
+      - GCP_CREDENTIALS_CLIENT_ID=${GCP_CREDENTIALS_CLIENT_ID:-}
+      - GCP_CREDENTIALS_CLIENT_EMAIL=${GCP_CREDENTIALS_CLIENT_EMAIL:-}
+      - GCP_CREDENTIALS_PRIVATE_KEY=${GCP_CREDENTIALS_PRIVATE_KEY:-}
+      - GCP_CREDENTIALS_TYPE=${GCP_CREDENTIALS_TYPE:-}
+      - GCP_STORAGE_BUCKET_NAME=${GCP_BUCKET_NAME}
+      - OPEN_AI_SECRET=${OPEN_AI_SECRET}
+      - LEGACY_API_SECRET=${LEGACY_API_SECRET}
+      - GATEWAY_URL=${APP_URL}
+      - GQL_GATEWAY_URL=${GATEWAY_URL}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - EXTERNAL_SECRET=${EXTERNAL_SECRET}
+      - VERTUO_IDENTITY_URL=${VERTUO_IDENTITY_URL}
+      - VERTUO_AUTH_URL=${VERTUO_AUTH_URL}
+      - VERTUO_KERNEL_URL=${KERNEL_URL}
+      - LAUNCHDARKLY_SDK_KEY=${LAUNCH_DARKLY_SDK_KEY}
+      - OTEL_ENABLED=${OTEL_ENABLED:-0}
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=vertuoza/vertuo-ai
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ai-migrations:
+        condition: service_completed_successfully
+    networks:
+      - vertuoza-network
+
+  ai-migrations:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/vertuo-ai-migrations:${PDF_BUILDER_VERSION:-latest}
+    environment:
+      - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/vertuo_ai
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - vertuoza-network
+
+  gateway:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/api-gateway:fe94968-20250424201304
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - MODE=development
+      - FORK=1
+      # Secrets
+      - JWT_KERNEL_PRIVATE_KEY=${JWT_PRIVATE_KEY}
+      - LEGACY_API_SECRET=${LEGACY_API_SECRET}
+      - EXTERNAL_SECRET=${EXTERNAL_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - VERTUO_SECRET=${VERTUO_SECRET}
+      - IDENTITY_FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      # OpenTelemetry
+      - OTEL_ENABLED=${OTEL_ENABLED:-0}
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=vertuoza/vertuo-gateway
+      # Environment variables at runtime
+      - VERTUO_SOFT_URL=${VERTUO_SOFT_URL}
+      - KERNEL_URL=${KERNEL_URL}
+      - KERNEL_HOST=${KERNEL_HOST}
+      - VERTUO_IDENTITY_URL=${VERTUO_IDENTITY_URL}
+      - VERTUO_AUTH_URL=${VERTUO_AUTH_URL}
+      - PDF_BUILDER_URL=${PDF_BUILDER_URL}
+      - VERTUO_WORK_URL=${VERTUO_WORK_URL}
+      - VERTUO_AI_URL=${VERTUO_AI_URL}
+      - ELECTRONIC_INVOICING_URL=${ELECTRONIC_INVOICING_URL}
+      - VERTUO_AI_PHP_URL=${VERTUO_AI_PHP_URL}
+    networks:
+      - vertuoza-network
+    depends_on:
+      - kernel
+      - work
+      - ai
+      # - pdf-builder
+      - client-space
+      - identity
+
+  vertuosoft:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/vertuosoft:${VERTUOSOFT_VERSION:-latest}
+    environment:
+      - APP_NAME=Vertuoza
+      - APP_ENV=local
+      - CHECK_DOMAIN=false
+      - APP_KEY=
+      - APP_DEBUG=true
+      - APP_URL=${APP_URL}
+      - PLANNING_URL=${APP_URL}
+      - PLANNING_URL_PROXY=${PLANNING_URL}
+      - WEB_URL=${APP_URL}
+      - WEB_URL_PROXY=${FRONT_URL}
+      - GQL_URL=${GATEWAY_URL}/graphql
+      - CLIENT_SPACE_URL=${CLIENT_SPACE_URL}
+      - KERNEL_URL=${KERNEL_URL}
+      - APP_TIMEZONE=UTC
+      - LOG_CHANNEL=stack
+      - LOG_ENABLED=true
+      - LOG_LEVEL=debug
+      - LOG_SLACK_WEBHOOK_URL=
+      - DB_CONNECTION=mysql
+      - DB_DSN=mysql:dbname=vertuoza_dvp;host=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=vertuoza_dvp
+      - DB_USERNAME=api
+      - DB_PASSWORD=root
+      - DB_STRICT_MODE=false
+      - SECURE=true
+      - PHP_SESSION_EXPIRATION=240
+      - CACHE_DRIVER=file
+      - QUEUE_CONNECTION=sync
+      - MODE=DEPLOYED
+      - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
+      - GCP_BUCKET_CREDENTIALS=${GCP_BUCKET_CREDENTIALS}
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      - GOOGLE_CLOUD_PROJECT=${GCP_PROJECT_ID}
+      - LEGACY_BUCKET=${GCP_LEGACY_BUCKET}
+      - UPLOAD_LEGACY_URL=http://php/upload.php
+      - UPLOAD_LEGACY_SECRET=1234
+      - UPLOAD_LEGACY_IS_ACTIVE=yes
+      - INTERCOM=nga9m7vi
+      - SKALIN=f7ac9610e66f1297
+      - EMAIL_DEBUG=kevin@vertuoza.com
+      - CHARGEBEE_SITE_ENDPOINT=${CHARGEBEE_SITE_ENDPOINT}
+      - CHARGEBEE_API_KEY=${CHARGEBEE_API_KEY}
+      - YOU_SIGN_API_URL=${YOU_SIGN_API_URL}
+      - YOU_SIGN_API_KEY=${YOU_SIGN_API_KEY}
+      - YOU_SIGN_BRANDING_ID=ae86f9fe-bf86-4039-9aab-12f589d46c61
+      - GOOGLE_DISTANCE_MATRIX_API_KEY=${GOOGLE_DISTANCE_MATRIX_API_KEY}
+      - EMAIL_BREVO_API_KEY=${EMAIL_BREVO_API_KEY}
+      - EMAIL_SANDBOX_ACTIVE=${EMAIL_SANDBOX_ACTIVE}
+      - EMAIL_AUTHORIZED_DOMAINS=${EMAIL_AUTHORIZED_DOMAINS}
+      - EMAIL_AUTHORIZED_EMAILS=${EMAIL_AUTHORIZED_EMAILS}
+      - EMAIL_PLACEHOLDER=${EMAIL_PLACEHOLDER}
+      - LAUNCH_DARKLY_SDK_KEY=${LAUNCH_DARKLY_SDK_KEY}
+      - LAUNCH_DARKLY_BASE_URI=${LAUNCH_DARKLY_BASE_URI:-}
+      - FEATURE_FLAGS_CACHE_LIFETIME=60
+      - HUBSPOT_TOKEN=${HUBSPOT_TOKEN}
+      - HUBSPOT_LIFECYCLE_PRODUCT=${HUBSPOT_LIFECYCLE_PRODUCT}
+      - XDEBUG_MODE=off
+      - BATIPRIX_SOFTWARE_API_KEY=${BATIPRIX_SOFTWARE_API_KEY}
+      - CEBEO_API_URL=${CEBEO_API_URL}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - CRON_SECRET=${CRON_SECRET}
+      - FILE_STORAGE_HOST=${GCP_FILE_STORAGE_HOST}
+      - BATIPRIX_BASE_URL=${BATIPRIX_BASE_URL}
+      - OTEL_ENABLED=${OTEL_ENABLED:-false}
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      - OTEL_EXPORTER_OTLP_TIMEOUT=${OTEL_EXPORTER_OTLP_TIMEOUT:-1500}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_HTTP_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_SERVICE_NAME=vertuoza/vertuo-soft
+      - OTEL_SDK_DISABLED=false
+      - OTEL_PHP_DISABLED_INSTRUMENTATIONS=none
+    depends_on:
+      mysql:
+          condition: service_healthy
+      kernel-migrations:
+          condition: service_completed_successfully
+    networks:
+      - vertuoza-network
+
+  front:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/frontapp:${FRONT_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - LEGACY_API_SECRET=${LEGACY_API_SECRET}
+      - NEXT_PUBLIC_APP_ENV=local
+      - NEXT_PUBLIC_APP_URL=${APP_URL}
+      - NEXT_PUBLIC_BACK_END_URL=${GATEWAY_URL}/graphql
+      - NEXT_PUBLIC_CLIENT_SPACE_BACK_END_URL=${CLIENT_SPACE_URL}
+      - NEXT_PUBLIC_BATIPRIX_BASE_URL=${BATIPRIX_BASE_URL}
+      - NEXT_PUBLIC_GOOGLE_MAP_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - NEXT_PUBLIC_LD_KEY=${LAUNCH_DARKLY_SDK_KEY}
+      - NEXT_PUBLIC_INTERCOM_APP_ID=${INTERCOM_APP_ID}
+      - NEXT_PUBLIC_INTERCOM_BASE_API_URI=${INTERCOM_BASE_API_URI}
+      - NEXT_PUBLIC_MAPTILER_API_KEY=${MAPTILER_API_KEY}
+      - NEXT_PUBLIC_PRODUCT_FRUITS_WORKSPACE_CODE=${PRODUCT_FRUITS_WORKSPACE_CODE}
+      - OTEL_ENABLED=${OTEL_ENABLED_BOOL:-false}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_HTTP_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+      - OTEL_SERVICE_NAME=vertuoza/vertuo-front
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+    depends_on:
+      - gateway
+    networks:
+      - vertuoza-network
+
+  planning:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/webapp:${PLANNING_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - GRAPHQL_API=${GATEWAY_URL}/graphql
+      - PORT=80
+    depends_on:
+      - gateway
+    networks:
+      - vertuoza-network
+
+  # DATABASES
+  mysql:
+    image: ghcr.io/vertuoza/vertuo-backend-php/services/vertuoza-mysql:${VERTUOZA_MYSQL_VERSION:-latest}
+    restart: always
+    networks:
+      - vertuoza-network
+
+  postgres:
+    image: postgres:${POSTGRES_VERSION:-15-alpine}
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    environment:
+      - POSTGRES_USER=vertuoza
+      - POSTGRES_PASSWORD=vertuoza_password
+      - POSTGRES_MULTIPLE_DATABASES=pdf_builder,vertuo_ai
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vertuoza -d pdf_builder -h localhost -p 5432']
+      interval: 10s
+      retries: 5
+      timeout: 5s
+    networks:
+      - vertuoza-network
+
+networks:
+  vertuoza-network:
+    name: "vertuoza-network"
+    attachable: true
+
+volumes:
+  vertuoza-ts-state:
+    driver: local

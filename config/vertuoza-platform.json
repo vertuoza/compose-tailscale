@@ -1,0 +1,55 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "${TS_CERT_DOMAIN}:443": {
+      "Handlers": {
+        "/kernel/": {
+          "Proxy": "http://kernel",
+          "StripPrefix": true
+        },
+        "/identity/": {
+          "Proxy": "http://identity",
+          "StripPrefix": true
+        },
+        "/auth/": {
+          "Proxy": "http://auth",
+          "StripPrefix": true
+        },
+        "/work/": {
+          "Proxy": "http://work",
+          "StripPrefix": true
+        },
+        "/pdf-builder/": {
+          "Proxy": "http://pdf-builder:4000",
+          "StripPrefix": true
+        },
+        "/ai/": {
+          "Proxy": "http://ai:4001",
+          "StripPrefix": true
+        },
+        "/gateway/": {
+          "Proxy": "http://gateway",
+          "StripPrefix": true
+        },
+        "/client-space/": {
+          "Proxy": "http://client-space",
+          "StripPrefix": true
+        },
+        "/plannings/": {
+          "Proxy": "http://planning",
+          "StripPrefix": true
+        },
+        "/": {
+          "Proxy": "http://vertuosoft"
+        }
+      }
+    }
+  },
+  "AllowFunnel": {
+    "${TS_CERT_DOMAIN}:443": false
+  }
+}
