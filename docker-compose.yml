@@ -3,7 +3,7 @@ services:
   tailscale:
     image: tailscale/tailscale:latest
     container_name: vertuoza-platform-ts
-    hostname: vertuoza-platform-ubuntu
+    hostname: vertuoza-dokploy
     environment:
       - TS_AUTHKEY=tskey-auth-khztQLEN6i11CNTRL-eW4hLGY2n9Dbh9qvYp5d9DbSpVYiNoCGb
       - "TS_EXTRA_ARGS=--advertise-tags=tag:container --reset"
