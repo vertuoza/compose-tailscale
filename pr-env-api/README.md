@@ -74,8 +74,11 @@ The API server can be configured using environment variables:
 | `PORT` | Port to listen on | `3000` |
 | `NODE_ENV` | Node environment | `production` |
 | `TAILSCALE_DOMAIN` | Tailscale domain | `tailf31c84.ts.net` |
+| `TAILSCALE_AUTH_KEY` | Tailscale auth key | None (required) |
 | `DB_PATH` | Path to SQLite database | `/app/data/pr-environments.db` |
 | `LOG_LEVEL` | Logging level | `info` |
+
+> **Security Note**: The `TAILSCALE_AUTH_KEY` is used to authenticate the PR Environment API Server with Tailscale. You can get your Tailscale auth key from the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys). The installation script will prompt you for this key if it's not set in the `.env` file.
 
 ## API Endpoints
 
@@ -282,8 +285,27 @@ jobs:
           echo "SERVICE_NAME=$(echo ${{ github.repository }} | cut -d '/' -f 2)" >> $GITHUB_OUTPUT
           echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
           echo "PR_ACTION=${{ github.event.action }}" >> $GITHUB_OUTPUT
+          echo "DOMAIN=${SERVICE_NAME}-pr-${PR_NUMBER}.tailf31c84.ts.net" >> $GITHUB_OUTPUT
 
       # Handle PR opened/updated
+      - name: Setup GCP credentials
+        if: github.event.action != 'closed'
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+      - name: Set up Docker Buildx
+        if: github.event.action != 'closed'
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GCP Container Registry
+        if: github.event.action != 'closed'
+        uses: docker/login-action@v2
+        with:
+          registry: europe-west1-docker.pkg.dev
+          username: _json_key
+          password: ${{ secrets.GCP_CREDENTIALS }}
+
       - name: Build and push Docker image
         if: github.event.action != 'closed'
         uses: docker/build-push-action@v4
@@ -291,6 +313,8 @@ jobs:
           context: .
           push: true
           tags: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
@@ -302,12 +326,37 @@ jobs:
       - name: Create/Update PR environment
         if: github.event.action != 'closed'
         run: |
+          # Read .pr-env file if it exists
+          ENV_VARS=()
+          if [ -f .pr-env ]; then
+            while IFS= read -r line || [[ -n "$line" ]]; do
+              # Skip comments and empty lines
+              if [[ ! "$line" =~ ^#.*$ ]] && [[ ! -z "$line" ]]; then
+                ENV_VARS+=("$line")
+              fi
+            done < .pr-env
+          fi
+
+          # Convert environment variables to JSON array
+          ENV_JSON="[]"
+          if [ ${#ENV_VARS[@]} -gt 0 ]; then
+            ENV_JSON="["
+            for var in "${ENV_VARS[@]}"; do
+              ENV_JSON+="\"$var\","
+            done
+            ENV_JSON="${ENV_JSON%,}]"
+          fi
+
+          # Create or update the environment
           curl -X POST https://pr-env-api.tailf31c84.ts.net/api/environments \
             -H "Content-Type: application/json" \
             -d '{
               "service_name": "${{ steps.env.outputs.SERVICE_NAME }}",
               "pr_number": ${{ steps.env.outputs.PR_NUMBER }},
-              "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
+              "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}",
+              "config": {
+                "environment": '"$ENV_JSON"'
+              }
             }'
 
       - name: Comment on PR
@@ -316,7 +365,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const url = `https://${{ steps.env.outputs.SERVICE_NAME }}-pr-${{ steps.env.outputs.PR_NUMBER }}.tailf31c84.ts.net`;
+            const url = `https://${{ steps.env.outputs.DOMAIN }}`;
 
             github.rest.issues.createComment({
               issue_number: ${{ steps.env.outputs.PR_NUMBER }},
@@ -344,6 +393,16 @@ jobs:
               body: `🧹 PR environment has been removed.`
             });
 ```
+
+For more detailed information about GitHub Actions integration, see the [GitHub Actions Integration Guide](./docs/github-actions-integration.md).
+
+## Documentation
+
+The following documentation is available:
+
+- [API Reference](./docs/api-reference.md): Detailed information about the API endpoints
+- [GitHub Actions Integration Guide](./docs/github-actions-integration.md): How to integrate with GitHub Actions
+- [Setup Guide](./docs/setup-guide.md): How to set up the PR Environment API Server
 
 ## License
 

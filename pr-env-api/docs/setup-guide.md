@@ -17,20 +17,7 @@ git clone https://github.com/yourusername/pr-env-api.git
 cd pr-env-api
 ```
 
-### 2. Configure Tailscale
-
-Run the Tailscale setup script to add the PR Environment API Server to your Tailscale configuration:
-
-```bash
-./setup-tailscale.sh
-```
-
-This script will:
-- Add the PR Environment API Server to your Tailscale configuration
-- Restart Tailscale to apply the changes
-- Make the API server accessible at `https://pr-env-api.tailf31c84.ts.net`
-
-### 3. Install the PR Environment API Server
+### 2. Install the PR Environment API Server
 
 Run the installation script:
 
@@ -39,8 +26,14 @@ Run the installation script:
 ```
 
 This script will:
-- Create a `.env` file with the necessary configuration
-- Build and start the Docker container
+- Check if Docker, Docker Compose, and Tailscale are installed
+- Create a `.env` file with the necessary configuration (if it doesn't exist)
+- Prompt you to enter your Tailscale auth key and domain
+- Create data and logs directories
+- Build and start the Docker containers
+- Make the API server accessible at `http://localhost:3000` and via Tailscale at `https://pr-env-api.tailf31c84.ts.net`
+
+> **Security Note**: The installation script will prompt you for your Tailscale auth key, which is used to authenticate the PR Environment API Server with Tailscale. You can get your Tailscale auth key from the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys).
 
 ### 4. Verify the Installation
 
@@ -142,4 +135,4 @@ docker-compose logs -f pr-env-api
 
 ## API Documentation
 
-See the [README.md](../README.md) file for detailed API documentation.
+See the [API Reference](./api-reference.md) file for detailed API documentation.

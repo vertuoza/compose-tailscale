@@ -33,8 +33,42 @@ if [ ! -f .env ]; then
     echo -e "${BLUE}Creating .env file...${NC}"
     cp .env.example .env
     echo -e "${GREEN}Created .env file.${NC}"
+    echo -e "${YELLOW}Please edit the .env file to set your Tailscale auth key and domain.${NC}"
+    echo -e "${BLUE}You can get your Tailscale auth key from:${NC} https://login.tailscale.com/admin/settings/keys"
+    read -p "Would you like to enter your Tailscale auth key now? (y/n) " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        read -p "Enter your Tailscale auth key: " tailscale_auth_key
+        sed -i "s/your-tailscale-auth-key/$tailscale_auth_key/g" .env
+        read -p "Enter your Tailscale domain (default: tailf31c84.ts.net): " tailscale_domain
+        tailscale_domain=${tailscale_domain:-tailf31c84.ts.net}
+        sed -i "s/your-tailscale-domain.ts.net/$tailscale_domain/g" .env
+        echo -e "${GREEN}Updated .env file with Tailscale configuration.${NC}"
+    else
+        echo -e "${YELLOW}Please edit the .env file manually before starting the server.${NC}"
+        exit 0
+    fi
 else
     echo -e "${YELLOW}.env file already exists. Skipping creation.${NC}"
+    # Check if TAILSCALE_AUTH_KEY is set in .env
+    if ! grep -q "TAILSCALE_AUTH_KEY" .env || grep -q "TAILSCALE_AUTH_KEY=your-tailscale-auth-key" .env; then
+        echo -e "${YELLOW}Warning: TAILSCALE_AUTH_KEY is not set in .env file.${NC}"
+        echo -e "${BLUE}You can get your Tailscale auth key from:${NC} https://login.tailscale.com/admin/settings/keys"
+        read -p "Would you like to enter your Tailscale auth key now? (y/n) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            read -p "Enter your Tailscale auth key: " tailscale_auth_key
+            if grep -q "TAILSCALE_AUTH_KEY" .env; then
+                sed -i "s/TAILSCALE_AUTH_KEY=.*/TAILSCALE_AUTH_KEY=$tailscale_auth_key/g" .env
+            else
+                echo "TAILSCALE_AUTH_KEY=$tailscale_auth_key" >> .env
+            fi
+            echo -e "${GREEN}Updated .env file with Tailscale auth key.${NC}"
+        else
+            echo -e "${YELLOW}Please edit the .env file manually before starting the server.${NC}"
+            exit 0
+        fi
+    fi
 fi
 
 # Create data and logs directories

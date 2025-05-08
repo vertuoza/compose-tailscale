@@ -10,13 +10,21 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}=== Starting Vertuoza Platform with Tailscale Integration for HTTPS ===${NC}"
 echo ""
 
-# Check if TS_AUTHKEY is provided or use the one in the compose file
+# Load environment variables from .env file
+if [ -f .env ]; then
+  source .env
+  echo -e "${BLUE}Loaded environment variables from .env file.${NC}"
+fi
+
+# Check if TS_AUTHKEY is provided as an argument, use it from .env, or use the default in docker-compose.yml
 if [ -n "$1" ]; then
-  export TS_AUTHKEY=$1
-  echo -e "${BLUE}Using provided TS_AUTHKEY.${NC}"
+  export TAILSCALE_AUTH_KEY=$1
+  echo -e "${BLUE}Using provided Tailscale auth key.${NC}"
+elif [ -n "$TAILSCALE_AUTH_KEY" ]; then
+  echo -e "${BLUE}Using Tailscale auth key from .env file.${NC}"
 else
-  echo -e "${YELLOW}No TS_AUTHKEY provided, using the one in docker-compose.yml.${NC}"
-  echo -e "${YELLOW}You can provide a different key as the first argument to this script.${NC}"
+  echo -e "${YELLOW}No Tailscale auth key provided, using the default in docker-compose.yml.${NC}"
+  echo -e "${YELLOW}You can provide a different key as the first argument to this script or set TAILSCALE_AUTH_KEY in .env file.${NC}"
 fi
 
 # Stop any existing containers
@@ -39,17 +47,17 @@ docker exec vertuoza-platform-ts tailscale status
 echo ""
 echo -e "${GREEN}=== Setup Complete ===${NC}"
 echo -e "${BLUE}You can now access the following services:${NC}"
-echo -e "Vertuosoft (default): https://vertuoza-dokploy.tailf31c84.ts.net"
-echo -e "Kernel: https://vertuoza-dokploy.tailf31c84.ts.net/kernel"
-echo -e "Identity: https://vertuoza-dokploy.tailf31c84.ts.net/identity"
-echo -e "Auth: https://vertuoza-dokploy.tailf31c84.ts.net/auth"
-echo -e "Work: https://vertuoza-dokploy.tailf31c84.ts.net/work"
-echo -e "PDF Builder: https://vertuoza-dokploy.tailf31c84.ts.net/pdf-builder"
-echo -e "AI: https://vertuoza-dokploy.tailf31c84.ts.net/ai"
-echo -e "Gateway: https://vertuoza-dokploy.tailf31c84.ts.net/gateway"
-echo -e "Client Space: https://vertuoza-dokploy.tailf31c84.ts.net/client-space"
-echo -e "Front: https://vertuoza-dokploy.tailf31c84.ts.net/front"
-echo -e "Planning: https://vertuoza-dokploy.tailf31c84.ts.net/planning"
+echo -e "Vertuosoft (default): https://tailscale-subdomain.tailf31c84.ts.net"
+echo -e "Kernel: https://tailscale-subdomain.tailf31c84.ts.net/kernel"
+echo -e "Identity: https://tailscale-subdomain.tailf31c84.ts.net/identity"
+echo -e "Auth: https://tailscale-subdomain.tailf31c84.ts.net/auth"
+echo -e "Work: https://tailscale-subdomain.tailf31c84.ts.net/work"
+echo -e "PDF Builder: https://tailscale-subdomain.tailf31c84.ts.net/pdf-builder"
+echo -e "AI: https://tailscale-subdomain.tailf31c84.ts.net/ai"
+echo -e "Gateway: https://tailscale-subdomain.tailf31c84.ts.net/gateway"
+echo -e "Client Space: https://tailscale-subdomain.tailf31c84.ts.net/client-space"
+echo -e "Front: https://tailscale-subdomain.tailf31c84.ts.net/front"
+echo -e "Planning: https://tailscale-subdomain.tailf31c84.ts.net/planning"
 echo ""
 echo -e "${YELLOW}Note: It may take a few moments for the Tailscale certificates to be generated.${NC}"
 echo -e "${YELLOW}If you encounter any issues, check the logs with:${NC}"
