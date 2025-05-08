@@ -3,7 +3,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const yaml = require('yaml');
 const { logger } = require('../utils/logger');
-const { run, get } = require('../database');
+const { run, get, all } = require('../database');
 
 // Environment directory
 const environmentsDir = path.join(__dirname, '../../data/environments');
@@ -64,7 +64,7 @@ async function setupPrEnvironment(serviceName, prNumber, imageUrl, config = {}) 
     await updateEnvFile(environmentDir, serviceName, prNumber, imageUrl, config);
 
     // Update docker-compose.yml if needed (e.g., to use the specific image)
-    await updateDockerComposeFile(environmentDir, serviceName, imageUrl);
+    await updateDockerComposeFile(environmentDir, serviceName, prNumber, imageUrl);
 
     logger.info(`Set up PR environment at ${environmentDir}`);
 
@@ -155,9 +155,10 @@ async function updateEnvFile(environmentDir, serviceName, prNumber, imageUrl, co
  * Update docker-compose.yml for PR environment
  * @param {string} environmentDir - Environment directory
  * @param {string} serviceName - Service name
+ * @param {number} prNumber - PR number
  * @param {string} imageUrl - Docker image URL
  */
-async function updateDockerComposeFile(environmentDir, serviceName, imageUrl) {
+async function updateDockerComposeFile(environmentDir, serviceName, prNumber, imageUrl) {
   try {
     // Path to the docker-compose.yml file
     const composePath = path.join(environmentDir, 'docker-compose.yml');
@@ -166,15 +167,61 @@ async function updateDockerComposeFile(environmentDir, serviceName, imageUrl) {
     const composeContent = await fs.readFile(composePath, 'utf8');
     const compose = yaml.parse(composeContent);
 
+    // Create environment ID
+    const environmentId = `${serviceName}-pr-${prNumber}`;
+
+    // Create a new network name based on the environment ID
+    const networkName = `${environmentId}-network`;
+
     // Update the service image if it exists in the compose file
     if (compose.services && compose.services[serviceName]) {
       compose.services[serviceName].image = imageUrl;
-
-      // Write updated docker-compose.yml
-      await fs.writeFile(composePath, yaml.stringify(compose));
-
-      logger.info(`Updated docker-compose.yml at ${composePath}`);
     }
+
+    // Update all services to use the new network
+    if (compose.services) {
+      Object.keys(compose.services).forEach(service => {
+        if (compose.services[service].networks) {
+          // Replace all occurrences of vertuoza-network with the new network
+          if (Array.isArray(compose.services[service].networks)) {
+            compose.services[service].networks = compose.services[service].networks.map(
+              network => network === 'vertuoza-network' ? networkName : network
+            );
+          } else {
+            // Handle object notation for networks
+            const networks = {};
+            Object.keys(compose.services[service].networks).forEach(network => {
+              if (network === 'vertuoza-network') {
+                networks[networkName] = compose.services[service].networks[network] || {};
+              } else {
+                networks[network] = compose.services[service].networks[network];
+              }
+            });
+            compose.services[service].networks = networks;
+          }
+        } else {
+          // If no networks defined, add the new network
+          compose.services[service].networks = [networkName];
+        }
+      });
+    }
+
+    // Update the networks section
+    compose.networks = compose.networks || {};
+
+    // Remove the vertuoza-network reference
+    delete compose.networks['vertuoza-network'];
+
+    // Add the new network
+    compose.networks[networkName] = {
+      name: networkName,
+      attachable: true
+    };
+
+    // Write updated docker-compose.yml
+    await fs.writeFile(composePath, yaml.stringify(compose));
+
+    logger.info(`Updated docker-compose.yml at ${composePath} with network ${networkName}`);
   } catch (err) {
     logger.error(`Error updating docker-compose.yml: ${err.message}`);
     throw err;
