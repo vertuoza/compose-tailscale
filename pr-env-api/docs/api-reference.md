@@ -17,13 +17,7 @@ Request body:
 {
   "service_name": "kernel",
   "pr_number": 123,
-  "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123",
-  "config": {
-    "environment": [
-      "FEATURE_FLAG_NEW_UI=true",
-      "DEBUG_LEVEL=verbose"
-    ]
-  }
+  "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123"
 }
 ```
 
@@ -35,13 +29,7 @@ Response:
   "prNumber": 123,
   "status": "running",
   "url": "https://kernel-pr-123.tailf31c84.ts.net",
-  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123",
-  "config": {
-    "environment": [
-      "FEATURE_FLAG_NEW_UI=true",
-      "DEBUG_LEVEL=verbose"
-    ]
-  }
+  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123"
 }
 ```
 
@@ -54,13 +42,7 @@ PUT /api/environments/:id
 Request body:
 ```json
 {
-  "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123-updated",
-  "config": {
-    "environment": [
-      "FEATURE_FLAG_NEW_UI=true",
-      "DEBUG_LEVEL=debug"
-    ]
-  }
+  "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123-updated"
 }
 ```
 
@@ -72,13 +54,7 @@ Response:
   "prNumber": 123,
   "status": "running",
   "url": "https://kernel-pr-123.tailf31c84.ts.net",
-  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123-updated",
-  "config": {
-    "environment": [
-      "FEATURE_FLAG_NEW_UI=true",
-      "DEBUG_LEVEL=debug"
-    ]
-  }
+  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123-updated"
 }
 ```
 
@@ -112,12 +88,6 @@ Response:
   "status": "running",
   "url": "https://kernel-pr-123.tailf31c84.ts.net",
   "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123",
-  "config": {
-    "environment": [
-      "FEATURE_FLAG_NEW_UI=true",
-      "DEBUG_LEVEL=verbose"
-    ]
-  },
   "createdAt": "2025-05-08T11:18:30.000Z",
   "updatedAt": "2025-05-08T11:18:30.000Z"
 }
@@ -145,12 +115,6 @@ Response:
       "status": "running",
       "url": "https://kernel-pr-123.tailf31c84.ts.net",
       "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123",
-      "config": {
-        "environment": [
-          "FEATURE_FLAG_NEW_UI=true",
-          "DEBUG_LEVEL=verbose"
-        ]
-      },
       "createdAt": "2025-05-08T11:18:30.000Z",
       "updatedAt": "2025-05-08T11:18:30.000Z"
     }
@@ -220,6 +184,26 @@ The API does not currently implement rate limiting, but it may be added in the f
 ## Pagination
 
 The API does not currently implement pagination, but it may be added in the future.
+
+## Project Structure
+
+The PR Environment API Server follows a modular structure with clear separation of concerns:
+
+### Utils
+
+- `utils/commandExecutor.js`: Handles shell command execution with proper error handling
+- `utils/fileSystem.js`: Provides file system operations with consistent error handling and logging
+- `utils/environmentConfig.js`: Manages environment configuration, IDs, paths, and URLs
+- `utils/logger.js`: Centralized logging functionality
+
+### Services
+
+- `services/environmentService.js`: High-level environment management that orchestrates other services
+- `services/dockerComposeService.js`: Docker Compose specific operations for environment setup and management
+
+### Routes
+
+- `routes/environments.js`: API endpoints for environment management
 
 ## Versioning
 

@@ -60,37 +60,13 @@ jobs:
       - name: Create/Update PR environment
         if: github.event.action != 'closed'
         run: |
-          # Read .pr-env file if it exists
-          ENV_VARS=()
-          if [ -f .pr-env ]; then
-            while IFS= read -r line || [[ -n "$line" ]]; do
-              # Skip comments and empty lines
-              if [[ ! "$line" =~ ^#.*$ ]] && [[ ! -z "$line" ]]; then
-                ENV_VARS+=("$line")
-              fi
-            done < .pr-env
-          fi
-
-          # Convert environment variables to JSON array
-          ENV_JSON="[]"
-          if [ ${#ENV_VARS[@]} -gt 0 ]; then
-            ENV_JSON="["
-            for var in "${ENV_VARS[@]}"; do
-              ENV_JSON+="\"$var\","
-            done
-            ENV_JSON="${ENV_JSON%,}]"
-          fi
-
           # Create or update the environment
           curl -X POST https://pr-env-api.tailf31c84.ts.net/api/environments \
             -H "Content-Type: application/json" \
             -d '{
               "service_name": "${{ steps.env.outputs.SERVICE_NAME }}",
               "pr_number": ${{ steps.env.outputs.PR_NUMBER }},
-              "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}",
-              "config": {
-                "environment": '"$ENV_JSON"'
-              }
+              "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
             }'
 
       - name: Comment on PR

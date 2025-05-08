@@ -133,6 +133,26 @@ You can monitor the API server logs:
 docker-compose logs -f pr-env-api
 ```
 
+## Project Structure
+
+The PR Environment API Server follows a modular structure with clear separation of concerns:
+
+### Utils
+
+- `utils/commandExecutor.js`: Handles shell command execution with proper error handling
+- `utils/fileSystem.js`: Provides file system operations with consistent error handling and logging
+- `utils/environmentConfig.js`: Manages environment configuration, IDs, paths, and URLs
+- `utils/logger.js`: Centralized logging functionality
+
+### Services
+
+- `services/environmentService.js`: High-level environment management that orchestrates other services
+- `services/dockerComposeService.js`: Docker Compose specific operations for environment setup and management
+
+### Routes
+
+- `routes/environments.js`: API endpoints for environment management
+
 ## API Documentation
 
 See the [API Reference](./api-reference.md) file for detailed API documentation.

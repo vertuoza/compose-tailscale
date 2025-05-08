@@ -6,8 +6,9 @@ const {
   updateEnvironment,
   removeEnvironment,
   getEnvironment,
-  listEnvironments
-} = require('../services/docker-compose');
+  listEnvironments,
+  getEnvironmentLogs
+} = require('../services/environmentService');
 
 /**
  * Create a new PR environment
@@ -15,7 +16,7 @@ const {
  */
 router.post('/', async (req, res) => {
   try {
-    const { service_name, pr_number, image_url, config } = req.body;
+    const { service_name, pr_number, image_url } = req.body;
 
     // Validate required fields
     if (!service_name) {
@@ -31,7 +32,7 @@ router.post('/', async (req, res) => {
     }
 
     // Create the environment
-    const environment = await createEnvironment(service_name, pr_number, image_url, config || {});
+    const environment = await createEnvironment(service_name, pr_number, image_url);
 
     return res.status(201).json(environment);
   } catch (err) {
@@ -47,7 +48,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { image_url, config } = req.body;
+    const { image_url } = req.body;
 
     // Parse the environment ID to get service_name and pr_number
     const parts = id.split('-pr-');
@@ -69,7 +70,7 @@ router.put('/:id', async (req, res) => {
     }
 
     // Update the environment
-    const environment = await updateEnvironment(service_name, pr_number, image_url, config || {});
+    const environment = await updateEnvironment(service_name, pr_number, image_url);
 
     return res.status(200).json(environment);
   } catch (err) {
@@ -173,13 +174,9 @@ router.get('/', async (req, res) => {
 router.get('/:id/logs', async (req, res) => {
   try {
     const { id } = req.params;
-    const { all } = require('../database');
 
     // Get logs for the environment
-    const logs = await all(
-      'SELECT * FROM environment_logs WHERE environment_id = ? ORDER BY created_at DESC',
-      [id]
-    );
+    const logs = await getEnvironmentLogs(id);
 
     return res.status(200).json({ logs });
   } catch (err) {

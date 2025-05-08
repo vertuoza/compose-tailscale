@@ -3,17 +3,17 @@ const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const fs = require('fs-extra');
-const path = require('path');
 const { setupDatabase } = require('./database');
 const { logger } = require('./utils/logger');
+const fileSystem = require('./utils/fileSystem');
 
 // Load environment variables
-dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config({ path: fileSystem.joinPath(__dirname, '../.env') });
 
 // Create data directory if it doesn't exist
-const dataDir = path.join(__dirname, '../data');
+const dataDir = fileSystem.joinPath(__dirname, '../data');
 fs.ensureDirSync(dataDir);
-fs.ensureDirSync(path.join(dataDir, 'environments'));
+fs.ensureDirSync(fileSystem.joinPath(dataDir, 'environments'));
 
 // Initialize the database
 setupDatabase();

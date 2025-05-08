@@ -1,14 +1,14 @@
 const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-const fs = require('fs-extra');
 const { logger } = require('./utils/logger');
+const fileSystem = require('./utils/fileSystem');
+const fs = require('fs-extra');
 
 // Ensure the data directory exists
-const dataDir = path.join(__dirname, '../data');
+const dataDir = fileSystem.joinPath(__dirname, '../data');
 fs.ensureDirSync(dataDir);
 
 // Database file path
-const dbPath = process.env.DB_PATH || path.join(dataDir, 'pr-environments.db');
+const dbPath = process.env.DB_PATH || fileSystem.joinPath(dataDir, 'pr-environments.db');
 
 // Initialize database
 function setupDatabase() {

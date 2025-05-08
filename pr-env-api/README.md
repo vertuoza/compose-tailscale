@@ -96,13 +96,7 @@ Request body:
 {
   "service_name": "kernel",
   "pr_number": 123,
-  "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123",
-  "config": {
-    "environment": [
-      "FEATURE_FLAG_NEW_UI=true",
-      "DEBUG_LEVEL=verbose"
-    ]
-  }
+  "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123"
 }
 ```
 
@@ -114,13 +108,7 @@ Response:
   "prNumber": 123,
   "status": "running",
   "url": "https://kernel-pr-123.tailf31c84.ts.net",
-  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123",
-  "config": {
-    "environment": [
-      "FEATURE_FLAG_NEW_UI=true",
-      "DEBUG_LEVEL=verbose"
-    ]
-  }
+  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123"
 }
 ```
 
@@ -133,13 +121,7 @@ PUT /api/environments/:id
 Request body:
 ```json
 {
-  "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123-updated",
-  "config": {
-    "environment": [
-      "FEATURE_FLAG_NEW_UI=true",
-      "DEBUG_LEVEL=debug"
-    ]
-  }
+  "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123-updated"
 }
 ```
 
@@ -151,13 +133,7 @@ Response:
   "prNumber": 123,
   "status": "running",
   "url": "https://kernel-pr-123.tailf31c84.ts.net",
-  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123-updated",
-  "config": {
-    "environment": [
-      "FEATURE_FLAG_NEW_UI=true",
-      "DEBUG_LEVEL=debug"
-    ]
-  }
+  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123-updated"
 }
 ```
 
@@ -191,12 +167,6 @@ Response:
   "status": "running",
   "url": "https://kernel-pr-123.tailf31c84.ts.net",
   "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123",
-  "config": {
-    "environment": [
-      "FEATURE_FLAG_NEW_UI=true",
-      "DEBUG_LEVEL=verbose"
-    ]
-  },
   "createdAt": "2025-05-08T11:18:30.000Z",
   "updatedAt": "2025-05-08T11:18:30.000Z"
 }
@@ -224,12 +194,6 @@ Response:
       "status": "running",
       "url": "https://kernel-pr-123.tailf31c84.ts.net",
       "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123",
-      "config": {
-        "environment": [
-          "FEATURE_FLAG_NEW_UI=true",
-          "DEBUG_LEVEL=verbose"
-        ]
-      },
       "createdAt": "2025-05-08T11:18:30.000Z",
       "updatedAt": "2025-05-08T11:18:30.000Z"
     }
@@ -326,37 +290,13 @@ jobs:
       - name: Create/Update PR environment
         if: github.event.action != 'closed'
         run: |
-          # Read .pr-env file if it exists
-          ENV_VARS=()
-          if [ -f .pr-env ]; then
-            while IFS= read -r line || [[ -n "$line" ]]; do
-              # Skip comments and empty lines
-              if [[ ! "$line" =~ ^#.*$ ]] && [[ ! -z "$line" ]]; then
-                ENV_VARS+=("$line")
-              fi
-            done < .pr-env
-          fi
-
-          # Convert environment variables to JSON array
-          ENV_JSON="[]"
-          if [ ${#ENV_VARS[@]} -gt 0 ]; then
-            ENV_JSON="["
-            for var in "${ENV_VARS[@]}"; do
-              ENV_JSON+="\"$var\","
-            done
-            ENV_JSON="${ENV_JSON%,}]"
-          fi
-
           # Create or update the environment
           curl -X POST https://pr-env-api.tailf31c84.ts.net/api/environments \
             -H "Content-Type: application/json" \
             -d '{
               "service_name": "${{ steps.env.outputs.SERVICE_NAME }}",
               "pr_number": ${{ steps.env.outputs.PR_NUMBER }},
-              "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}",
-              "config": {
-                "environment": '"$ENV_JSON"'
-              }
+              "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
             }'
 
       - name: Comment on PR
@@ -395,6 +335,26 @@ jobs:
 ```
 
 For more detailed information about GitHub Actions integration, see the [GitHub Actions Integration Guide](./docs/github-actions-integration.md).
+
+## Project Structure
+
+The project follows a modular structure with clear separation of concerns:
+
+### Utils
+
+- `utils/commandExecutor.js`: Handles shell command execution
+- `utils/fileSystem.js`: Provides file system operations with error handling
+- `utils/environmentConfig.js`: Manages environment configuration and paths
+- `utils/logger.js`: Centralized logging functionality
+
+### Services
+
+- `services/environmentService.js`: High-level environment management
+- `services/dockerComposeService.js`: Docker Compose specific operations
+
+### Routes
+
+- `routes/environments.js`: API endpoints for environment management
 
 ## Documentation
 

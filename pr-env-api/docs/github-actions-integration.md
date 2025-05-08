@@ -120,37 +120,13 @@ jobs:
       - name: Create/Update PR environment
         if: github.event.action != 'closed'
         run: |
-          # Read .pr-env file if it exists
-          ENV_VARS=()
-          if [ -f .pr-env ]; then
-            while IFS= read -r line || [[ -n "$line" ]]; do
-              # Skip comments and empty lines
-              if [[ ! "$line" =~ ^#.*$ ]] && [[ ! -z "$line" ]]; then
-                ENV_VARS+=("$line")
-              fi
-            done < .pr-env
-          fi
-
-          # Convert environment variables to JSON array
-          ENV_JSON="[]"
-          if [ ${#ENV_VARS[@]} -gt 0 ]; then
-            ENV_JSON="["
-            for var in "${ENV_VARS[@]}"; do
-              ENV_JSON+="\"$var\","
-            done
-            ENV_JSON="${ENV_JSON%,}]"
-          fi
-
           # Create or update the environment
           curl -X POST https://pr-env-api.tailf31c84.ts.net/api/environments \
             -H "Content-Type: application/json" \
             -d '{
               "service_name": "${{ steps.env.outputs.SERVICE_NAME }}",
               "pr_number": ${{ steps.env.outputs.PR_NUMBER }},
-              "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}",
-              "config": {
-                "environment": '"$ENV_JSON"'
-              }
+              "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
             }'
 
       - name: Comment on PR
@@ -196,17 +172,25 @@ Customize the workflow file as needed for your repository:
 - Adjust the environment variables
 - Modify the PR comment template
 
-## PR-Specific Environment Variables
+## Project Structure
 
-You can customize environment variables for your PR by adding a `.pr-env` file to your repository:
+The PR Environment API Server follows a modular structure with clear separation of concerns:
 
-```
-# Example .pr-env file
-FEATURE_FLAG_NEW_UI=true
-DEBUG_LEVEL=verbose
-```
+### Utils
 
-This file should be committed to your branch and will be used to override environment variables in your PR environment.
+- `utils/commandExecutor.js`: Handles shell command execution with proper error handling
+- `utils/fileSystem.js`: Provides file system operations with consistent error handling and logging
+- `utils/environmentConfig.js`: Manages environment configuration, IDs, paths, and URLs
+- `utils/logger.js`: Centralized logging functionality
+
+### Services
+
+- `services/environmentService.js`: High-level environment management that orchestrates other services
+- `services/dockerComposeService.js`: Docker Compose specific operations for environment setup and management
+
+### Routes
+
+- `routes/environments.js`: API endpoints for environment management
 
 ## Testing the Integration
 
