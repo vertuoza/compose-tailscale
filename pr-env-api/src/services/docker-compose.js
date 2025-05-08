@@ -42,10 +42,9 @@ function executeCommand(command) {
  * @param {string} serviceName - Service name
  * @param {number} prNumber - PR number
  * @param {string} imageUrl - Docker image URL
- * @param {Object} config - Additional configuration
  * @returns {string} - Path to the configured folder
  */
-async function setupPrEnvironment(serviceName, prNumber, imageUrl, config = {}) {
+async function setupPrEnvironment(serviceName, prNumber, imageUrl) {
   try {
     // Create environment ID
     const environmentId = `${serviceName}-pr-${prNumber}`;
@@ -60,11 +59,8 @@ async function setupPrEnvironment(serviceName, prNumber, imageUrl, config = {}) 
     // Copy the entire vertuoza-compose folder contents directly to the environment directory
     await fs.copy(sourceDir, environmentDir);
 
-    // Update the .env file with PR-specific configuration
-    await updateEnvFile(environmentDir, serviceName, prNumber, imageUrl, config);
-
-    // Update docker-compose.yml if needed (e.g., to use the specific image)
-    await updateDockerComposeFile(environmentDir, serviceName, prNumber, imageUrl);
+    // Update environment files with PR-specific configuration
+    await updateEnvironmentFiles(environmentDir, serviceName, prNumber, imageUrl);
 
     logger.info(`Set up PR environment at ${environmentDir}`);
 
@@ -76,154 +72,50 @@ async function setupPrEnvironment(serviceName, prNumber, imageUrl, config = {}) 
 }
 
 /**
- * Update .env file for PR environment
+ * Update environment files by replacing tailscale-subdomain with the specific PR environment subdomain
  * @param {string} environmentDir - Environment directory
  * @param {string} serviceName - Service name
  * @param {number} prNumber - PR number
  * @param {string} imageUrl - Docker image URL
- * @param {Object} config - Additional configuration
  */
-async function updateEnvFile(environmentDir, serviceName, prNumber, imageUrl, config = {}) {
+async function updateEnvironmentFiles(environmentDir, serviceName, prNumber, imageUrl) {
   try {
-    // Create environment ID
+    // Create environment ID (subdomain)
     const environmentId = `${serviceName}-pr-${prNumber}`;
 
-    // Base URL for the environment
-    const baseUrl = `https://${environmentId}.${tailscaleDomain}`;
-
-    // Path to the .env file
+    // Update .env file if it exists
     const envPath = path.join(environmentDir, '.env');
+    if (await fs.pathExists(envPath)) {
+      let envContent = await fs.readFile(envPath, 'utf8');
 
-    // Read existing .env file if it exists
-    let envContent = '';
-    try {
-      envContent = await fs.readFile(envPath, 'utf8');
-    } catch (err) {
-      // File doesn't exist, create a new one
-      logger.info(`Creating new .env file at ${envPath}`);
+      // Replace all occurrences of tailscale-subdomain with the environment ID
+      envContent = envContent.replace(/tailscale-subdomain/g, environmentId);
+
+      // Write updated .env file
+      await fs.writeFile(envPath, envContent);
+      logger.info(`Updated .env file at ${envPath} with subdomain ${environmentId}`);
     }
 
-    // Parse existing environment variables
-    const envVars = {};
-    envContent.split('\n').forEach(line => {
-      const match = line.match(/^([^=]+)=(.*)$/);
-      if (match) {
-        envVars[match[1]] = match[2];
-      }
-    });
-
-    // Update environment variables
-    Object.assign(envVars, {
-      APP_URL: baseUrl,
-      FRONT_URL: `${baseUrl}/front`,
-      GATEWAY_URL: `${baseUrl}/gateway`,
-      KERNEL_URL: `${baseUrl}/kernel`,
-      VERTUO_IDENTITY_URL: `${baseUrl}/identity`,
-      VERTUO_AUTH_URL: `${baseUrl}/auth`,
-      VERTUO_WORK_URL: `${baseUrl}/work`,
-      PDF_BUILDER_URL: `${baseUrl}/pdf-builder`,
-      VERTUO_AI_URL: `${baseUrl}/ai`,
-      CLIENT_SPACE_URL: `${baseUrl}/client-space`,
-      // Add service-specific variables
-      [`${serviceName.toUpperCase()}_VERSION`]: 'latest',
-      // Add any additional environment variables from config
-      ...(config.environment ? config.environment.reduce((acc, env) => {
-        const match = env.match(/^([^=]+)=(.*)$/);
-        if (match) {
-          acc[match[1]] = match[2];
-        }
-        return acc;
-      }, {}) : {})
-    });
-
-    // Convert back to .env format
-    const newEnvContent = Object.entries(envVars)
-      .map(([key, value]) => `${key}=${value}`)
-      .join('\n');
-
-    // Write updated .env file
-    await fs.writeFile(envPath, newEnvContent);
-
-    logger.info(`Updated .env file at ${envPath}`);
-  } catch (err) {
-    logger.error(`Error updating .env file: ${err.message}`);
-    throw err;
-  }
-}
-
-/**
- * Update docker-compose.yml for PR environment
- * @param {string} environmentDir - Environment directory
- * @param {string} serviceName - Service name
- * @param {number} prNumber - PR number
- * @param {string} imageUrl - Docker image URL
- */
-async function updateDockerComposeFile(environmentDir, serviceName, prNumber, imageUrl) {
-  try {
-    // Path to the docker-compose.yml file
+    // Update docker-compose.yml
     const composePath = path.join(environmentDir, 'docker-compose.yml');
+    let composeContent = await fs.readFile(composePath, 'utf8');
 
-    // Read docker-compose.yml
-    const composeContent = await fs.readFile(composePath, 'utf8');
+    // Replace all occurrences of tailscale-subdomain with the environment ID
+    composeContent = composeContent.replace(/tailscale-subdomain/g, environmentId);
+
+    // Parse the updated content to YAML
     const compose = yaml.parse(composeContent);
-
-    // Create environment ID
-    const environmentId = `${serviceName}-pr-${prNumber}`;
-
-    // Create a new network name based on the environment ID
-    const networkName = `${environmentId}-network`;
 
     // Update the service image if it exists in the compose file
     if (compose.services && compose.services[serviceName]) {
       compose.services[serviceName].image = imageUrl;
     }
 
-    // Update all services to use the new network
-    if (compose.services) {
-      Object.keys(compose.services).forEach(service => {
-        if (compose.services[service].networks) {
-          // Replace all occurrences of vertuoza-network with the new network
-          if (Array.isArray(compose.services[service].networks)) {
-            compose.services[service].networks = compose.services[service].networks.map(
-              network => network === 'vertuoza-network' ? networkName : network
-            );
-          } else {
-            // Handle object notation for networks
-            const networks = {};
-            Object.keys(compose.services[service].networks).forEach(network => {
-              if (network === 'vertuoza-network') {
-                networks[networkName] = compose.services[service].networks[network] || {};
-              } else {
-                networks[network] = compose.services[service].networks[network];
-              }
-            });
-            compose.services[service].networks = networks;
-          }
-        } else {
-          // If no networks defined, add the new network
-          compose.services[service].networks = [networkName];
-        }
-      });
-    }
-
-    // Update the networks section
-    compose.networks = compose.networks || {};
-
-    // Remove the vertuoza-network reference
-    delete compose.networks['vertuoza-network'];
-
-    // Add the new network
-    compose.networks[networkName] = {
-      name: networkName,
-      attachable: true
-    };
-
     // Write updated docker-compose.yml
     await fs.writeFile(composePath, yaml.stringify(compose));
-
-    logger.info(`Updated docker-compose.yml at ${composePath} with network ${networkName}`);
+    logger.info(`Updated docker-compose.yml at ${composePath} with subdomain ${environmentId}`);
   } catch (err) {
-    logger.error(`Error updating docker-compose.yml: ${err.message}`);
+    logger.error(`Error updating environment files: ${err.message}`);
     throw err;
   }
 }
@@ -233,10 +125,9 @@ async function updateDockerComposeFile(environmentDir, serviceName, prNumber, im
  * @param {string} serviceName - Service name
  * @param {number} prNumber - PR number
  * @param {string} imageUrl - Docker image URL
- * @param {Object} config - Additional configuration
  * @returns {Object} - Environment details
  */
-async function createEnvironment(serviceName, prNumber, imageUrl, config = {}) {
+async function createEnvironment(serviceName, prNumber, imageUrl) {
   try {
     // Create environment ID
     const environmentId = `${serviceName}-pr-${prNumber}`;
@@ -245,11 +136,11 @@ async function createEnvironment(serviceName, prNumber, imageUrl, config = {}) {
     const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
 
     if (existingEnv) {
-      return updateEnvironment(serviceName, prNumber, imageUrl, config);
+      return updateEnvironment(serviceName, prNumber, imageUrl);
     }
 
     // Set up PR environment with vertuoza-compose
-    const environmentDir = await setupPrEnvironment(serviceName, prNumber, imageUrl, config);
+    const environmentDir = await setupPrEnvironment(serviceName, prNumber, imageUrl);
 
     // Start the environment
     await executeCommand(`cd ${environmentDir} && docker compose up -d`);
@@ -259,8 +150,8 @@ async function createEnvironment(serviceName, prNumber, imageUrl, config = {}) {
 
     // Store environment in database
     await run(
-      'INSERT INTO environments (id, service_name, pr_number, status, url, image_url, config) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [environmentId, serviceName, prNumber, 'running', url, imageUrl, JSON.stringify(config)]
+      'INSERT INTO environments (id, service_name, pr_number, status, url, image_url) VALUES (?, ?, ?, ?, ?, ?)',
+      [environmentId, serviceName, prNumber, 'running', url, imageUrl]
     );
 
     // Log the action
@@ -275,8 +166,7 @@ async function createEnvironment(serviceName, prNumber, imageUrl, config = {}) {
       prNumber,
       status: 'running',
       url,
-      imageUrl,
-      config
+      imageUrl
     };
   } catch (err) {
     logger.error(`Error creating environment: ${err.message}`);
@@ -296,10 +186,9 @@ async function createEnvironment(serviceName, prNumber, imageUrl, config = {}) {
  * @param {string} serviceName - Service name
  * @param {number} prNumber - PR number
  * @param {string} imageUrl - Docker image URL
- * @param {Object} config - Additional configuration
  * @returns {Object} - Environment details
  */
-async function updateEnvironment(serviceName, prNumber, imageUrl, config = {}) {
+async function updateEnvironment(serviceName, prNumber, imageUrl) {
   try {
     // Create environment ID
     const environmentId = `${serviceName}-pr-${prNumber}`;
@@ -308,11 +197,11 @@ async function updateEnvironment(serviceName, prNumber, imageUrl, config = {}) {
     const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
 
     if (!existingEnv) {
-      return createEnvironment(serviceName, prNumber, imageUrl, config);
+      return createEnvironment(serviceName, prNumber, imageUrl);
     }
 
     // Set up PR environment with vertuoza-compose
-    const environmentDir = await setupPrEnvironment(serviceName, prNumber, imageUrl, config);
+    const environmentDir = await setupPrEnvironment(serviceName, prNumber, imageUrl);
 
     // Update the environment
     await executeCommand(`cd ${environmentDir} && docker compose up -d`);
@@ -322,8 +211,8 @@ async function updateEnvironment(serviceName, prNumber, imageUrl, config = {}) {
 
     // Update environment in database
     await run(
-      'UPDATE environments SET status = ?, image_url = ?, config = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      ['running', imageUrl, JSON.stringify(config), environmentId]
+      'UPDATE environments SET status = ?, image_url = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      ['running', imageUrl, environmentId]
     );
 
     // Log the action
@@ -338,8 +227,7 @@ async function updateEnvironment(serviceName, prNumber, imageUrl, config = {}) {
       prNumber,
       status: 'running',
       url,
-      imageUrl,
-      config
+      imageUrl
     };
   } catch (err) {
     logger.error(`Error updating environment: ${err.message}`);
@@ -434,7 +322,6 @@ async function getEnvironment(environmentId) {
       status: environment.status,
       url: environment.url,
       imageUrl: environment.image_url,
-      config: JSON.parse(environment.config || '{}'),
       createdAt: environment.created_at,
       updatedAt: environment.updated_at
     };
@@ -488,7 +375,6 @@ async function listEnvironments(filters = {}) {
       status: env.status,
       url: env.url,
       imageUrl: env.image_url,
-      config: JSON.parse(env.config || '{}'),
       createdAt: env.created_at,
       updatedAt: env.updated_at
     }));
