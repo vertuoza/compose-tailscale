@@ -6,19 +6,10 @@ const { logger } = require('../utils/logger');
 const { run, get } = require('../database');
 
 // Environment directory
-const environmentsDir = process.env.ENVIRONMENTS_DIR || path.join(__dirname, '../../data/environments');
-
-// Base docker-compose.yml path
-const baseComposeFile = process.env.BASE_COMPOSE_FILE || path.join(__dirname, '../../../docker-compose.yml');
-
-// Docker Compose executable path
-const dockerComposePath = process.env.DOCKER_COMPOSE_PATH || 'docker-compose';
+const environmentsDir = path.join(__dirname, '../../data/environments');
 
 // Tailscale domain
 const tailscaleDomain = process.env.TAILSCALE_DOMAIN || 'tailf31c84.ts.net';
-
-// Tailscale config path
-const tailscaleConfigPath = process.env.TAILSCALE_CONFIG_PATH || path.join(__dirname, '../../../config/vertuoza-platform.json');
 
 /**
  * Execute a shell command and return a promise
@@ -47,14 +38,14 @@ function executeCommand(command) {
 }
 
 /**
- * Generate a docker-compose.override.yml file for a PR environment
+ * Copy and configure vertuoza-compose folder for PR environment
  * @param {string} serviceName - Service name
  * @param {number} prNumber - PR number
  * @param {string} imageUrl - Docker image URL
  * @param {Object} config - Additional configuration
- * @returns {string} - Path to the generated file
+ * @returns {string} - Path to the configured folder
  */
-async function generateComposeOverride(serviceName, prNumber, imageUrl, config = {}) {
+async function setupPrEnvironment(serviceName, prNumber, imageUrl, config = {}) {
   try {
     // Create environment ID
     const environmentId = `${serviceName}-pr-${prNumber}`;
@@ -63,133 +54,129 @@ async function generateComposeOverride(serviceName, prNumber, imageUrl, config =
     const environmentDir = path.join(environmentsDir, environmentId);
     await fs.ensureDir(environmentDir);
 
-    // Read the base docker-compose.yml
-    const baseComposeContent = await fs.readFile(baseComposeFile, 'utf8');
-    const baseCompose = yaml.parse(baseComposeContent);
+    // Path to the source vertuoza-compose folder
+    const sourceDir = path.join(__dirname, '../../../vertuoza-compose');
 
-    // Create override for the specific service
-    const override = {
-      version: baseCompose.version || '3',
-      services: {
-        [serviceName]: {
-          image: imageUrl,
-          environment: [
-            `PR_NUMBER=${prNumber}`,
-            `REPOSITORY_NAME=${serviceName}`
-          ]
-        }
-      }
-    };
+    // Copy the entire vertuoza-compose folder contents directly to the environment directory
+    await fs.copy(sourceDir, environmentDir);
 
-    // Add any additional environment variables from config
-    if (config.environment) {
-      override.services[serviceName].environment = [
-        ...override.services[serviceName].environment,
-        ...config.environment
-      ];
-    }
+    // Update the .env file with PR-specific configuration
+    await updateEnvFile(environmentDir, serviceName, prNumber, imageUrl, config);
 
-    // Write the override file
-    const overridePath = path.join(environmentDir, 'docker-compose.override.yml');
-    await fs.writeFile(overridePath, yaml.stringify(override));
+    // Update docker-compose.yml if needed (e.g., to use the specific image)
+    await updateDockerComposeFile(environmentDir, serviceName, imageUrl);
 
-    // Update Tailscale configuration
-    await updateTailscaleConfig(serviceName, prNumber);
+    logger.info(`Set up PR environment at ${environmentDir}`);
 
-    return overridePath;
+    return environmentDir;
   } catch (err) {
-    logger.error(`Error generating compose override: ${err.message}`);
+    logger.error(`Error setting up PR environment: ${err.message}`);
     throw err;
   }
 }
 
 /**
- * Update Tailscale configuration to include the PR environment
+ * Update .env file for PR environment
+ * @param {string} environmentDir - Environment directory
  * @param {string} serviceName - Service name
  * @param {number} prNumber - PR number
+ * @param {string} imageUrl - Docker image URL
+ * @param {Object} config - Additional configuration
  */
-async function updateTailscaleConfig(serviceName, prNumber) {
+async function updateEnvFile(environmentDir, serviceName, prNumber, imageUrl, config = {}) {
   try {
     // Create environment ID
     const environmentId = `${serviceName}-pr-${prNumber}`;
 
-    // Read the current Tailscale config
-    const tailscaleConfigContent = await fs.readFile(tailscaleConfigPath, 'utf8');
-    const tailscaleConfig = JSON.parse(tailscaleConfigContent);
+    // Base URL for the environment
+    const baseUrl = `https://${environmentId}.${tailscaleDomain}`;
 
-    // Create the URL for the PR environment
-    const prUrl = `${environmentId}.${tailscaleDomain}`;
+    // Path to the .env file
+    const envPath = path.join(environmentDir, '.env');
 
-    // Add the PR environment to the Tailscale config
-    if (!tailscaleConfig.Web) {
-      tailscaleConfig.Web = {};
+    // Read existing .env file if it exists
+    let envContent = '';
+    try {
+      envContent = await fs.readFile(envPath, 'utf8');
+    } catch (err) {
+      // File doesn't exist, create a new one
+      logger.info(`Creating new .env file at ${envPath}`);
     }
 
-    // Add the PR environment to the Web section
-    tailscaleConfig.Web[`${prUrl}:443`] = {
-      Handlers: {
-        "/": {
-          Proxy: `http://${serviceName}`
-        }
+    // Parse existing environment variables
+    const envVars = {};
+    envContent.split('\n').forEach(line => {
+      const match = line.match(/^([^=]+)=(.*)$/);
+      if (match) {
+        envVars[match[1]] = match[2];
       }
-    };
+    });
 
-    // Add AllowFunnel entry
-    if (!tailscaleConfig.AllowFunnel) {
-      tailscaleConfig.AllowFunnel = {};
-    }
+    // Update environment variables
+    Object.assign(envVars, {
+      APP_URL: baseUrl,
+      FRONT_URL: `${baseUrl}/front`,
+      GATEWAY_URL: `${baseUrl}/gateway`,
+      KERNEL_URL: `${baseUrl}/kernel`,
+      VERTUO_IDENTITY_URL: `${baseUrl}/identity`,
+      VERTUO_AUTH_URL: `${baseUrl}/auth`,
+      VERTUO_WORK_URL: `${baseUrl}/work`,
+      PDF_BUILDER_URL: `${baseUrl}/pdf-builder`,
+      VERTUO_AI_URL: `${baseUrl}/ai`,
+      CLIENT_SPACE_URL: `${baseUrl}/client-space`,
+      // Add service-specific variables
+      [`${serviceName.toUpperCase()}_VERSION`]: 'latest',
+      // Add any additional environment variables from config
+      ...(config.environment ? config.environment.reduce((acc, env) => {
+        const match = env.match(/^([^=]+)=(.*)$/);
+        if (match) {
+          acc[match[1]] = match[2];
+        }
+        return acc;
+      }, {}) : {})
+    });
 
-    tailscaleConfig.AllowFunnel[`${prUrl}:443`] = false;
+    // Convert back to .env format
+    const newEnvContent = Object.entries(envVars)
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
 
-    // Write the updated config
-    await fs.writeFile(tailscaleConfigPath, JSON.stringify(tailscaleConfig, null, 2));
+    // Write updated .env file
+    await fs.writeFile(envPath, newEnvContent);
 
-    // Restart Tailscale to apply the changes
-    await executeCommand('docker restart vertuoza-platform-ts');
-
-    logger.info(`Updated Tailscale config for ${prUrl}`);
+    logger.info(`Updated .env file at ${envPath}`);
   } catch (err) {
-    logger.error(`Error updating Tailscale config: ${err.message}`);
+    logger.error(`Error updating .env file: ${err.message}`);
     throw err;
   }
 }
 
 /**
- * Remove PR environment from Tailscale configuration
+ * Update docker-compose.yml for PR environment
+ * @param {string} environmentDir - Environment directory
  * @param {string} serviceName - Service name
- * @param {number} prNumber - PR number
+ * @param {string} imageUrl - Docker image URL
  */
-async function removeTailscaleConfig(serviceName, prNumber) {
+async function updateDockerComposeFile(environmentDir, serviceName, imageUrl) {
   try {
-    // Create environment ID
-    const environmentId = `${serviceName}-pr-${prNumber}`;
+    // Path to the docker-compose.yml file
+    const composePath = path.join(environmentDir, 'docker-compose.yml');
 
-    // Read the current Tailscale config
-    const tailscaleConfigContent = await fs.readFile(tailscaleConfigPath, 'utf8');
-    const tailscaleConfig = JSON.parse(tailscaleConfigContent);
+    // Read docker-compose.yml
+    const composeContent = await fs.readFile(composePath, 'utf8');
+    const compose = yaml.parse(composeContent);
 
-    // Create the URL for the PR environment
-    const prUrl = `${environmentId}.${tailscaleDomain}`;
+    // Update the service image if it exists in the compose file
+    if (compose.services && compose.services[serviceName]) {
+      compose.services[serviceName].image = imageUrl;
 
-    // Remove the PR environment from the Web section
-    if (tailscaleConfig.Web && tailscaleConfig.Web[`${prUrl}:443`]) {
-      delete tailscaleConfig.Web[`${prUrl}:443`];
+      // Write updated docker-compose.yml
+      await fs.writeFile(composePath, yaml.stringify(compose));
+
+      logger.info(`Updated docker-compose.yml at ${composePath}`);
     }
-
-    // Remove AllowFunnel entry
-    if (tailscaleConfig.AllowFunnel && tailscaleConfig.AllowFunnel[`${prUrl}:443`]) {
-      delete tailscaleConfig.AllowFunnel[`${prUrl}:443`];
-    }
-
-    // Write the updated config
-    await fs.writeFile(tailscaleConfigPath, JSON.stringify(tailscaleConfig, null, 2));
-
-    // Restart Tailscale to apply the changes
-    await executeCommand('docker restart vertuoza-platform-ts');
-
-    logger.info(`Removed ${prUrl} from Tailscale config`);
   } catch (err) {
-    logger.error(`Error removing Tailscale config: ${err.message}`);
+    logger.error(`Error updating docker-compose.yml: ${err.message}`);
     throw err;
   }
 }
@@ -214,14 +201,11 @@ async function createEnvironment(serviceName, prNumber, imageUrl, config = {}) {
       return updateEnvironment(serviceName, prNumber, imageUrl, config);
     }
 
-    // Generate docker-compose.override.yml
-    const overridePath = await generateComposeOverride(serviceName, prNumber, imageUrl, config);
-
-    // Get the directory containing the override file
-    const environmentDir = path.dirname(overridePath);
+    // Set up PR environment with vertuoza-compose
+    const environmentDir = await setupPrEnvironment(serviceName, prNumber, imageUrl, config);
 
     // Start the environment
-    await executeCommand(`cd ${environmentDir} && ${dockerComposePath} -f ${baseComposeFile} -f ${overridePath} up -d`);
+    await executeCommand(`cd ${environmentDir} && docker compose up -d`);
 
     // Create the URL for the PR environment
     const url = `https://${environmentId}.${tailscaleDomain}`;
@@ -280,14 +264,11 @@ async function updateEnvironment(serviceName, prNumber, imageUrl, config = {}) {
       return createEnvironment(serviceName, prNumber, imageUrl, config);
     }
 
-    // Generate docker-compose.override.yml
-    const overridePath = await generateComposeOverride(serviceName, prNumber, imageUrl, config);
-
-    // Get the directory containing the override file
-    const environmentDir = path.dirname(overridePath);
+    // Set up PR environment with vertuoza-compose
+    const environmentDir = await setupPrEnvironment(serviceName, prNumber, imageUrl, config);
 
     // Update the environment
-    await executeCommand(`cd ${environmentDir} && ${dockerComposePath} -f ${baseComposeFile} -f ${overridePath} up -d`);
+    await executeCommand(`cd ${environmentDir} && docker compose up -d`);
 
     // Create the URL for the PR environment
     const url = `https://${environmentId}.${tailscaleDomain}`;
@@ -347,17 +328,11 @@ async function removeEnvironment(serviceName, prNumber) {
     // Get the environment directory
     const environmentDir = path.join(environmentsDir, environmentId);
 
-    // Get the override file path
-    const overridePath = path.join(environmentDir, 'docker-compose.override.yml');
+    // Stop and remove the environment with volumes and orphans
+    await executeCommand(`cd ${environmentDir} && docker compose down -v --remove-orphans`);
 
-  // Stop and remove the environment with volumes and orphans
-  await executeCommand(`cd ${environmentDir} && ${dockerComposePath} -f ${baseComposeFile} -f ${overridePath} down -v --remove-orphans`);
-
-  // Clean up any dangling containers, images, and volumes
-  await executeCommand('docker system prune -f');
-
-    // Remove Tailscale configuration
-    await removeTailscaleConfig(serviceName, prNumber);
+    // Clean up any dangling containers, images, and volumes
+    await executeCommand('docker system prune -f');
 
     // Update environment status in database
     await run(

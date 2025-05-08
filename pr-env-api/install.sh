@@ -32,17 +32,7 @@ fi
 if [ ! -f .env ]; then
     echo -e "${BLUE}Creating .env file...${NC}"
     cp .env.example .env
-
-    # No JWT secret needed anymore
-
-    # Set the correct paths
-    BASE_COMPOSE_FILE=$(pwd)/../docker-compose.yml
-    TAILSCALE_CONFIG_PATH=$(pwd)/../config/vertuoza-platform.json
-
-    sed -i "s|BASE_COMPOSE_FILE=.*|BASE_COMPOSE_FILE=$BASE_COMPOSE_FILE|" .env
-    sed -i "s|TAILSCALE_CONFIG_PATH=.*|TAILSCALE_CONFIG_PATH=$TAILSCALE_CONFIG_PATH|" .env
-
-    echo -e "${GREEN}Created .env file with correct paths.${NC}"
+    echo -e "${GREEN}Created .env file.${NC}"
 else
     echo -e "${YELLOW}.env file already exists. Skipping creation.${NC}"
 fi

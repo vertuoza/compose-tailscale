@@ -1,0 +1,19 @@
+{
+  "TCP": {
+    "443": {
+      "HTTPS": true
+    }
+  },
+  "Web": {
+    "pr-env-api.${TS_CERT_DOMAIN}:443": {
+      "Handlers": {
+        "/": {
+          "Proxy": "http://pr-env-api:3000"
+        }
+      }
+    }
+  },
+  "AllowFunnel": {
+    "pr-env-api.${TS_CERT_DOMAIN}:443": false
+  }
+}

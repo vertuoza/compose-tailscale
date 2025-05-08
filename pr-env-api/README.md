@@ -73,11 +73,7 @@ The API server can be configured using environment variables:
 |----------|-------------|---------|
 | `PORT` | Port to listen on | `3000` |
 | `NODE_ENV` | Node environment | `production` |
-| `DOCKER_COMPOSE_PATH` | Path to Docker Compose executable | `/usr/bin/docker-compose` |
-| `BASE_COMPOSE_FILE` | Path to base docker-compose.yml | `/app/docker-compose.yml` |
-| `ENVIRONMENTS_DIR` | Directory to store environment files | `/app/data/environments` |
 | `TAILSCALE_DOMAIN` | Tailscale domain | `tailf31c84.ts.net` |
-| `TAILSCALE_CONFIG_PATH` | Path to Tailscale config | `/app/tailscale-config.json` |
 | `DB_PATH` | Path to SQLite database | `/app/data/pr-environments.db` |
 | `LOG_LEVEL` | Logging level | `info` |
 
