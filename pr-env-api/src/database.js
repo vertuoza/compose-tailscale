@@ -32,8 +32,7 @@ function setupDatabase() {
         url TEXT NOT NULL,
         image_url TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        config TEXT
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `, (err) => {
       if (err) {
