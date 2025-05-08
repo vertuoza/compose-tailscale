@@ -1,0 +1,34 @@
+version: '3'
+
+services:
+  pr-env-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pr-env-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${BASE_COMPOSE_FILE:-/Users/maximebosquet/compose-tailscale/docker-compose.yml}:/app/docker-compose.yml:ro
+      - ${TAILSCALE_CONFIG_PATH:-/Users/maximebosquet/compose-tailscale/config/vertuoza-platform.json}:/app/tailscale-config.json
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DOCKER_COMPOSE_PATH=/usr/bin/docker-compose
+      - BASE_COMPOSE_FILE=/app/docker-compose.yml
+      - ENVIRONMENTS_DIR=/app/data/environments
+      - TAILSCALE_DOMAIN=${TAILSCALE_DOMAIN:-tailf31c84.ts.net}
+      - TAILSCALE_CONFIG_PATH=/app/tailscale-config.json
+      - DB_PATH=/app/data/pr-environments.db
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    networks:
+      - vertuoza-network
+
+networks:
+  vertuoza-network:
+    external: true
+    name: "vertuoza-network"
