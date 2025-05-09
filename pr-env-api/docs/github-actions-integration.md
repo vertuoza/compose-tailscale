@@ -66,8 +66,13 @@ on:
     types: [opened, synchronize, reopened, closed]
 
 jobs:
-  pr-environment:
+  # Common setup job to set environment variables
+  setup:
     runs-on: ubuntu-latest
+    outputs:
+      service_name: ${{ steps.env.outputs.SERVICE_NAME }}
+      pr_number: ${{ steps.env.outputs.PR_NUMBER }}
+      pr_action: ${{ steps.env.outputs.PR_ACTION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -81,13 +86,19 @@ jobs:
           echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
           echo "PR_ACTION=${{ github.event.action }}" >> $GITHUB_OUTPUT
 
-      # Handle PR opened/updated
+  # Build main service image
+  build-main-service:
+    needs: setup
+    if: needs.setup.outputs.pr_action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Set up Docker Buildx
-        if: github.event.action != 'closed'
         uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        if: github.event.action != 'closed'
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
@@ -95,41 +106,72 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push main service image
-        if: github.event.action != 'closed'
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+          tags: ghcr.io/vertuoza/${{ needs.setup.outputs.service_name }}:pr-${{ needs.setup.outputs.pr_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # Build migrations image
+  build-migrations:
+    needs: setup
+    if: needs.setup.outputs.pr_action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push migrations image
-        if: github.event.action != 'closed'
         uses: docker/build-push-action@v4
         with:
           context: ./migrations  # Adjust this path to where your migrations Dockerfile is located
           push: true
-          tags: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}-migrations:pr-${{ steps.env.outputs.PR_NUMBER }}
+          tags: ghcr.io/vertuoza/${{ needs.setup.outputs.service_name }}-migrations:pr-${{ needs.setup.outputs.pr_number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # Manage PR environment
+  manage-environment:
+    needs: [setup, build-main-service, build-migrations]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Connect to Tailscale
+        if: needs.setup.outputs.pr_action != 'closed'
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:github-actions
 
       # Use the custom PR Environment action
       - name: Manage PR Environment
         uses: vertuoza/github-actions/pr-environment@main
         with:
-          repository_name: ${{ steps.env.outputs.SERVICE_NAME }}
-          pr_number: ${{ steps.env.outputs.PR_NUMBER }}
-          pr_action: ${{ steps.env.outputs.PR_ACTION }}
+          repository_name: ${{ needs.setup.outputs.service_name }}
+          pr_number: ${{ needs.setup.outputs.pr_number }}
+          pr_action: ${{ needs.setup.outputs.pr_action }}
           services_json: |
             [
               {
-                "name": "${{ steps.env.outputs.SERVICE_NAME }}",
-                "image_url": "ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
+                "name": "${{ needs.setup.outputs.service_name }}",
+                "image_url": "ghcr.io/vertuoza/${{ needs.setup.outputs.service_name }}:pr-${{ needs.setup.outputs.pr_number }}"
               },
               {
-                "name": "${{ steps.env.outputs.SERVICE_NAME }}-migrations",
-                "image_url": "ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}-migrations:pr-${{ steps.env.outputs.PR_NUMBER }}"
+                "name": "${{ needs.setup.outputs.service_name }}-migrations",
+                "image_url": "ghcr.io/vertuoza/${{ needs.setup.outputs.service_name }}-migrations:pr-${{ needs.setup.outputs.pr_number }}"
               }
             ]
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -141,6 +183,21 @@ Customize the workflow file as needed for your repository:
 
 - Adjust the environment variables
 - Modify the custom action inputs if needed
+
+### 5. Parallel Builds for Improved Performance
+
+The workflow is designed to build Docker images in parallel to improve performance:
+
+1. The `setup` job sets environment variables and outputs them for other jobs
+2. The `build-main-service` and `build-migrations` jobs run in parallel, both depending only on the `setup` job
+3. The `manage-environment` job depends on all previous jobs and only runs after both build jobs are complete
+
+This parallel execution significantly reduces the overall workflow execution time, especially when building multiple Docker images. The workflow uses GitHub Actions' job dependencies to orchestrate the parallel execution while ensuring that the PR environment is only created or updated after all images are built and pushed.
+
+Key benefits:
+- Faster PR environment creation and updates
+- More efficient use of GitHub Actions runners
+- Reduced waiting time for developers
 
 ## Custom GitHub Action
 
