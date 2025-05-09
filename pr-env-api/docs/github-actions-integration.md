@@ -66,30 +66,9 @@ on:
     types: [opened, synchronize, reopened, closed]
 
 jobs:
-  # Common setup job to set environment variables
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      service_name: ${{ steps.env.outputs.SERVICE_NAME }}
-      pr_number: ${{ steps.env.outputs.PR_NUMBER }}
-      pr_action: ${{ steps.env.outputs.PR_ACTION }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Set environment variables
-        id: env
-        run: |
-          echo "SERVICE_NAME=$(echo ${{ github.repository }} | cut -d '/' -f 2)" >> $GITHUB_OUTPUT
-          echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          echo "PR_ACTION=${{ github.event.action }}" >> $GITHUB_OUTPUT
-
   # Build main service image
   build-main-service:
-    needs: setup
-    if: needs.setup.outputs.pr_action != 'closed'
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -110,14 +89,13 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/vertuoza/${{ needs.setup.outputs.service_name }}:pr-${{ needs.setup.outputs.pr_number }}
+          tags: ghcr.io/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   # Build migrations image
   build-migrations:
-    needs: setup
-    if: needs.setup.outputs.pr_action != 'closed'
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -138,42 +116,43 @@ jobs:
         with:
           context: ./migrations  # Adjust this path to where your migrations Dockerfile is located
           push: true
-          tags: ghcr.io/vertuoza/${{ needs.setup.outputs.service_name }}-migrations:pr-${{ needs.setup.outputs.pr_number }}
+          tags: ghcr.io/vertuoza/${{ github.repository.name }}-migrations:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   # Manage PR environment
   manage-environment:
-    needs: [setup, build-main-service, build-migrations]
-    runs-on: ubuntu-latest
+    needs: [build-main-service, build-migrations]
     if: always()
+    runs-on: ubuntu-latest
     steps:
-      - name: Connect to Tailscale
-        if: needs.setup.outputs.pr_action != 'closed'
-        uses: tailscale/github-action@v2
+      # For PR opened/updated events
+      - name: Create/Update PR Environment
+        if: github.event.action != 'closed'
+        uses: vertuoza/github-actions/pr-environment-create@main
         with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:github-actions
-
-      # Use the custom PR Environment action
-      - name: Manage PR Environment
-        uses: vertuoza/github-actions/pr-environment@main
-        with:
-          repository_name: ${{ needs.setup.outputs.service_name }}
-          pr_number: ${{ needs.setup.outputs.pr_number }}
-          pr_action: ${{ needs.setup.outputs.pr_action }}
+          repository_name: ${{ github.repository.name }}
+          pr_number: ${{ github.event.pull_request.number }}
           services_json: |
             [
               {
-                "name": "${{ needs.setup.outputs.service_name }}",
-                "image_url": "ghcr.io/vertuoza/${{ needs.setup.outputs.service_name }}:pr-${{ needs.setup.outputs.pr_number }}"
+                "name": "${{ github.repository.name }}",
+                "image_url": "ghcr.io/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}"
               },
               {
-                "name": "${{ needs.setup.outputs.service_name }}-migrations",
-                "image_url": "ghcr.io/vertuoza/${{ needs.setup.outputs.service_name }}-migrations:pr-${{ needs.setup.outputs.pr_number }}"
+                "name": "${{ github.repository.name }}-migrations",
+                "image_url": "ghcr.io/vertuoza/${{ github.repository.name }}-migrations:pr-${{ github.event.pull_request.number }}"
               }
             ]
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # For PR closed events
+      - name: Remove PR Environment
+        if: github.event.action == 'closed'
+        uses: vertuoza/github-actions/pr-environment-remove@main
+        with:
+          repository_name: ${{ github.repository.name }}
+          pr_number: ${{ github.event.pull_request.number }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
@@ -188,9 +167,8 @@ Customize the workflow file as needed for your repository:
 
 The workflow is designed to build Docker images in parallel to improve performance:
 
-1. The `setup` job sets environment variables and outputs them for other jobs
-2. The `build-main-service` and `build-migrations` jobs run in parallel, both depending only on the `setup` job
-3. The `manage-environment` job depends on all previous jobs and only runs after both build jobs are complete
+1. The `build-main-service` and `build-migrations` jobs run in parallel since they have no dependencies on each other
+2. The `manage-environment` job depends on both build jobs and only runs after both build jobs are complete
 
 This parallel execution significantly reduces the overall workflow execution time, especially when building multiple Docker images. The workflow uses GitHub Actions' job dependencies to orchestrate the parallel execution while ensuring that the PR environment is only created or updated after all images are built and pushed.
 
@@ -198,6 +176,37 @@ Key benefits:
 - Faster PR environment creation and updates
 - More efficient use of GitHub Actions runners
 - Reduced waiting time for developers
+- Simplified workflow using GitHub context variables directly
+
+### 6. Separate Actions for Creation and Removal
+
+The workflow uses two separate GitHub Actions for clarity and separation of concerns:
+
+1. **PR Environment Create/Update Action**: Used when a PR is opened, synchronized, or reopened
+   - Connects to Tailscale
+   - Creates or updates the PR environment with the specified services
+   - Comments on the PR with the environment URL
+
+2. **PR Environment Remove Action**: Used when a PR is closed
+   - Connects to Tailscale
+   - Removes the PR environment
+   - Comments on the PR about the removal
+
+This separation makes the workflow more explicit and easier to understand, especially for the PR closing process. The workflow uses conditional steps to call the appropriate action based on the PR event type:
+
+```yaml
+# For PR opened/updated events
+- name: Create/Update PR Environment
+  if: github.event.action != 'closed'
+  uses: vertuoza/github-actions/pr-environment-create@main
+  # ...
+
+# For PR closed events
+- name: Remove PR Environment
+  if: github.event.action == 'closed'
+  uses: vertuoza/github-actions/pr-environment-remove@main
+  # ...
+```
 
 ## Custom GitHub Action
 
@@ -205,21 +214,40 @@ The workflow above uses a custom GitHub Action that encapsulates the PR environm
 
 ### Action Inputs
 
+#### PR Environment Create/Update Action
+
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `repository_name` | Name of the repository | Yes | |
 | `pr_number` | PR number | Yes | |
-| `pr_action` | PR action (opened, synchronize, reopened, closed) | Yes | |
 | `services_json` | JSON array of services with name and image_url properties | Yes | |
+| `github_token` | GitHub token for commenting on PRs | Yes | |
+| `api_url` | URL of the PR Environment API | No | 'https://pr-env-api.tailf31c84.ts.net' |
+| `tailscale_domain` | Tailscale domain for the PR environment | No | 'tailf31c84.ts.net' |
+
+#### PR Environment Remove Action
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `repository_name` | Name of the repository | Yes | |
+| `pr_number` | PR number | Yes | |
 | `github_token` | GitHub token for commenting on PRs | Yes | |
 | `api_url` | URL of the PR Environment API | No | 'https://pr-env-api.tailf31c84.ts.net' |
 | `tailscale_domain` | Tailscale domain for the PR environment | No | 'tailf31c84.ts.net' |
 
 ### Action Outputs
 
+#### PR Environment Create/Update Action
+
 | Output | Description |
 |--------|-------------|
 | `environment_url` | URL of the PR environment |
+| `environment_id` | ID of the PR environment |
+
+#### PR Environment Remove Action
+
+| Output | Description |
+|--------|-------------|
 | `environment_id` | ID of the PR environment |
 
 ### How the Action Works
@@ -318,7 +346,7 @@ If you're using a different container registry, update the workflow file accordi
   with:
     context: .
     push: true
-    tags: yourusername/yourrepo:pr-${{ steps.env.outputs.PR_NUMBER }}
+    tags: yourusername/yourrepo:pr-${{ github.event.pull_request.number }}
 ```
 
 ```yaml
@@ -343,7 +371,7 @@ If you're using a different container registry, update the workflow file accordi
   with:
     context: .
     push: true
-    tags: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+    tags: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}
 ```
 
 ### Using a Different Domain
@@ -351,17 +379,17 @@ If you're using a different container registry, update the workflow file accordi
 If you're using a different Tailscale domain, specify it in the custom action:
 
 ```yaml
-- name: Manage PR Environment
-  uses: vertuoza/github-actions/pr-environment@main
+- name: Create/Update PR Environment
+  if: github.event.action != 'closed'
+  uses: vertuoza/github-actions/pr-environment-create@main
   with:
-    repository_name: ${{ steps.env.outputs.SERVICE_NAME }}
-    pr_number: ${{ steps.env.outputs.PR_NUMBER }}
-    pr_action: ${{ steps.env.outputs.PR_ACTION }}
+    repository_name: ${{ github.repository.name }}
+    pr_number: ${{ github.event.pull_request.number }}
     services_json: |
       [
         {
-          "name": "${{ steps.env.outputs.SERVICE_NAME }}",
-          "image_url": "ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
+          "name": "${{ github.repository.name }}",
+          "image_url": "ghcr.io/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}"
         }
       ]
     github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -375,17 +403,17 @@ If you're using a different Tailscale domain, specify it in the custom action:
 If your API server is at a different URL, specify it in the custom action:
 
 ```yaml
-- name: Manage PR Environment
-  uses: vertuoza/github-actions/pr-environment@main
+- name: Create/Update PR Environment
+  if: github.event.action != 'closed'
+  uses: vertuoza/github-actions/pr-environment-create@main
   with:
-    repository_name: ${{ steps.env.outputs.SERVICE_NAME }}
-    pr_number: ${{ steps.env.outputs.PR_NUMBER }}
-    pr_action: ${{ steps.env.outputs.PR_ACTION }}
+    repository_name: ${{ github.repository.name }}
+    pr_number: ${{ github.event.pull_request.number }}
     services_json: |
       [
         {
-          "name": "${{ steps.env.outputs.SERVICE_NAME }}",
-          "image_url": "ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
+          "name": "${{ github.repository.name }}",
+          "image_url": "ghcr.io/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}"
         }
       ]
     github_token: ${{ secrets.GITHUB_TOKEN }}

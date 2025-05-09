@@ -1,5 +1,5 @@
-name: 'PR Environment'
-description: 'Create, update, or remove PR environments using the PR Environment API'
+name: 'PR Environment Create/Update'
+description: 'Create or update PR environments using the PR Environment API'
 author: 'Vertuoza'
 
 inputs:
@@ -8,9 +8,6 @@ inputs:
     required: true
   pr_number:
     description: 'PR number'
-    required: true
-  pr_action:
-    description: 'PR action (opened, synchronize, reopened, closed)'
     required: true
   services_json:
     description: 'JSON array of services with name and image_url properties'
@@ -58,7 +55,6 @@ runs:
         tags: tag:github-actions
 
     - name: Create/Update PR environment
-      if: inputs.pr_action != 'closed'
       shell: bash
       run: |
         # Create or update the environment
@@ -71,7 +67,6 @@ runs:
           }'
 
     - name: Comment on PR about creation/update
-      if: inputs.pr_action != 'closed'
       uses: actions/github-script@v6
       with:
         github-token: ${{ inputs.github_token }}
@@ -83,23 +78,4 @@ runs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             body: `🚀 PR environment deployed at: ${url}\n\nThis environment will be automatically updated when you push new commits to this PR.`
-          });
-
-    - name: Remove PR environment
-      if: inputs.pr_action == 'closed'
-      shell: bash
-      run: |
-        curl -X DELETE "${{ inputs.api_url }}/api/environments/${{ steps.set-id.outputs.id }}"
-
-    - name: Comment on PR about removal
-      if: inputs.pr_action == 'closed'
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{ inputs.github_token }}
-        script: |
-          github.rest.issues.createComment({
-            issue_number: ${{ inputs.pr_number }},
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: `🧹 PR environment has been removed.`
           });

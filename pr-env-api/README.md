@@ -235,52 +235,62 @@ on:
     types: [opened, synchronize, reopened, closed]
 
 jobs:
-  pr-environment:
+  # Build main service image
+  build-main-service:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
-      - name: Set environment variables
-        id: env
-        run: |
-          echo "SERVICE_NAME=$(echo ${{ github.repository }} | cut -d '/' -f 2)" >> $GITHUB_OUTPUT
-          echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          echo "PR_ACTION=${{ github.event.action }}" >> $GITHUB_OUTPUT
-
-      # Handle PR opened/updated
       - name: Set up Docker Buildx
-        if: github.event.action != 'closed'
         uses: docker/setup-buildx-action@v2
 
       - name: Login to GitHub Container Registry
-        if: github.event.action != 'closed'
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
-        if: github.event.action != 'closed'
+      - name: Build and push main service image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+          tags: ghcr.io/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Use the custom PR Environment action
-      - name: Manage PR Environment
-        uses: vertuoza/github-actions/pr-environment@main
+  # Manage PR environment
+  manage-environment:
+    needs: [build-main-service]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      # For PR opened/updated events
+      - name: Create/Update PR Environment
+        if: github.event.action != 'closed'
+        uses: vertuoza/github-actions/pr-environment-create@main
         with:
-          service_name: ${{ steps.env.outputs.SERVICE_NAME }}
-          pr_number: ${{ steps.env.outputs.PR_NUMBER }}
-          pr_action: ${{ steps.env.outputs.PR_ACTION }}
-          image_url: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+          repository_name: ${{ github.repository.name }}
+          pr_number: ${{ github.event.pull_request.number }}
+          services_json: |
+            [
+              {
+                "name": "${{ github.repository.name }}",
+                "image_url": "ghcr.io/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}"
+              }
+            ]
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # For PR closed events
+      - name: Remove PR Environment
+        if: github.event.action == 'closed'
+        uses: vertuoza/github-actions/pr-environment-remove@main
+        with:
+          repository_name: ${{ github.repository.name }}
+          pr_number: ${{ github.event.pull_request.number }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
