@@ -5,10 +5,80 @@ on:
     types: [opened, synchronize, reopened, closed]
 
 jobs:
-  # Build main service image
-  build-main-service:
+  # Detect changes in services
+  detect-changes:
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      services_changed: ${{ steps.set-matrix.outputs.services_changed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for file change detection
+
+      - name: Detect service changes
+        id: set-matrix
+        run: |
+          # Define services and their paths (manually configured)
+          # Format: "service_name:service_path"
+          SERVICES=(
+            # Define your services here, for example:
+            "kernel:./services/kernel"
+            "kernel-migrations:./services/kernel/migrations"
+            "vertuo-ai:./services/vertuo-ai"
+            "vertuo-ai-migrations:./services/vertuo-ai/migrations"
+          )
+
+          # Initialize matrix and tracking variables
+          MATRIX="{"
+          MATRIX="${MATRIX}\"include\":["
+          SERVICES_CHANGED="false"
+
+          # Check each service for changes
+          for SERVICE_INFO in "${SERVICES[@]}"; do
+            # Split service info into name and path
+            SERVICE_NAME="${SERVICE_INFO%%:*}"
+            SERVICE_PATH="${SERVICE_INFO#*:}"
+
+            # Remove leading ./ if present for grep pattern
+            GREP_PATH="${SERVICE_PATH}"
+            GREP_PATH="${GREP_PATH#./}"
+
+            # Check if files in the service directory changed
+            if git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep -q "^${GREP_PATH}/"; then
+              CHANGED="true"
+            else
+              CHANGED="false"
+            fi
+
+            # Add to matrix
+            MATRIX="${MATRIX}{\"service\":\"${SERVICE_NAME}\",\"path\":\"${SERVICE_PATH}\",\"changed\":${CHANGED}},"
+
+            # Update services_changed flag
+            if [ "$CHANGED" = "true" ]; then
+              SERVICES_CHANGED="true"
+            fi
+          done
+
+          # Remove trailing comma and close JSON
+          MATRIX="${MATRIX%,}]}"
+
+          # Set outputs
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+          echo "services_changed=${SERVICES_CHANGED}" >> $GITHUB_OUTPUT
+
+  # Build services using matrix
+  build-services:
+    needs: detect-changes
+    if: github.event.action != 'closed' && needs.detect-changes.outputs.services_changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.detect-changes.outputs.matrix) }}
+      fail-fast: false
+    # Only run for services that have changes
+    if: ${{ matrix.changed == true }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -23,71 +93,73 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push main service image
+      - name: Build and push service image
         uses: docker/build-push-action@v4
         with:
-          context: .
+          context: ${{ matrix.path }}
           push: true
-          tags: ghcr.io/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}
+          tags: ghcr.io/vertuoza/${{ github.repository.name }}-${{ matrix.service }}:pr-${{ github.event.pull_request.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Build migrations image
-  build-migrations:
+  # Create/Update PR environment
+  create-update-environment:
+    needs: [detect-changes, build-services]
     if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+      - name: Prepare services JSON
+        id: prepare-services
+        run: |
+          # Get matrix from detect-changes job
+          MATRIX='${{ needs.detect-changes.outputs.matrix }}'
 
-      - name: Login to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # Start with an empty array
+          SERVICES="["
 
-      - name: Build and push migrations image
-        uses: docker/build-push-action@v4
-        with:
-          context: ./migrations  # Adjust this path to where your migrations Dockerfile is located
-          push: true
-          tags: ghcr.io/vertuoza/${{ github.repository.name }}-migrations:pr-${{ github.event.pull_request.number }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Parse matrix JSON to extract services that were built
+          FIRST=true
+          for SERVICE in $(echo "$MATRIX" | jq -r '.include[] | select(.changed == true) | @base64'); do
+            # Decode service info
+            SERVICE_INFO=$(echo "$SERVICE" | base64 --decode)
+            SERVICE_NAME=$(echo "$SERVICE_INFO" | jq -r '.service')
 
-  # Manage PR environment
-  manage-environment:
-    needs: [build-main-service, build-migrations]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      # For PR opened/updated events
+            # Add comma if not the first service
+            if [ "$FIRST" = "false" ]; then
+              SERVICES="$SERVICES,"
+            fi
+            FIRST=false
+
+            # Format image name
+            IMAGE_NAME="${{ github.repository.name }}-${SERVICE_NAME}"
+
+            # Add service to JSON
+            SERVICES="$SERVICES{\"name\": \"${IMAGE_NAME}\", \"image_url\": \"ghcr.io/vertuoza/${IMAGE_NAME}:pr-${{ github.event.pull_request.number }}\"}"
+          done
+
+          # Close the array
+          SERVICES="$SERVICES]"
+
+          # Set output
+          echo "services=$SERVICES" >> $GITHUB_OUTPUT
+
       - name: Create/Update PR Environment
-        if: github.event.action != 'closed'
         uses: vertuoza/github-actions/pr-environment-create@main
         with:
           repository_name: ${{ github.repository.name }}
           pr_number: ${{ github.event.pull_request.number }}
-          services_json: |
-            [
-              {
-                "name": "${{ github.repository.name }}",
-                "image_url": "ghcr.io/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}"
-              },
-              {
-                "name": "${{ github.repository.name }}-migrations",
-                "image_url": "ghcr.io/vertuoza/${{ github.repository.name }}-migrations:pr-${{ github.event.pull_request.number }}"
-              }
-            ]
+          services_json: ${{ steps.prepare-services.outputs.services }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      # For PR closed events
+  # Remove PR environment
+  remove-environment:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
       - name: Remove PR Environment
-        if: github.event.action == 'closed'
         uses: vertuoza/github-actions/pr-environment-remove@main
         with:
           repository_name: ${{ github.repository.name }}
