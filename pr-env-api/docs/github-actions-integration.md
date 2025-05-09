@@ -29,9 +29,9 @@ To allow GitHub Actions to connect to your Tailscale network:
 5. Save the client
 6. Copy the Client ID and Client Secret
 
-Add these credentials to your GitHub repository secrets:
+Add these credentials to your github-actions repository secrets:
 
-1. Go to your GitHub repository
+1. Go to your github-actions repository
 2. Navigate to "Settings" > "Secrets and variables" > "Actions"
 3. Click "New repository secret"
 4. Name: `TS_OAUTH_CLIENT_ID`
@@ -42,20 +42,21 @@ Add these credentials to your GitHub repository secrets:
 9. Value: Your Tailscale OAuth Client Secret
 10. Click "Add secret"
 
-### 2. Add GCP Credentials (if using GCP Container Registry)
+### 2. GitHub Container Registry Access
 
-If you're using Google Cloud Platform's Container Registry, add your GCP credentials as a GitHub secret:
+By default, GitHub Actions workflows have access to the GitHub Container Registry (ghcr.io) using the `GITHUB_TOKEN` that is automatically provided to all workflows. No additional configuration is needed for basic usage.
 
-1. Go to your GitHub repository
-2. Navigate to "Settings" > "Secrets and variables" > "Actions"
-3. Click "New repository secret"
-4. Name: `GCP_CREDENTIALS`
-5. Value: Your GCP credentials JSON
-6. Click "Add secret"
+If you need to customize access permissions:
+
+1. Go to your repository
+2. Navigate to "Settings" > "Actions" > "General"
+3. Scroll down to "Workflow permissions"
+4. Ensure "Read and write permissions" is selected
+5. Click "Save"
 
 ### 3. Create the GitHub Actions Workflow File
 
-Create a file at `.github/workflows/pr-environment.yml` in your repository with the following content:
+Create a file at `.github/workflows/pr-environment.yml` in your service repository with the following content:
 
 ```yaml
 name: PR Environment
@@ -79,26 +80,19 @@ jobs:
           echo "SERVICE_NAME=$(echo ${{ github.repository }} | cut -d '/' -f 2)" >> $GITHUB_OUTPUT
           echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
           echo "PR_ACTION=${{ github.event.action }}" >> $GITHUB_OUTPUT
-          echo "DOMAIN=${SERVICE_NAME}-pr-${PR_NUMBER}.tailf31c84.ts.net" >> $GITHUB_OUTPUT
 
       # Handle PR opened/updated
-      - name: Setup GCP credentials
-        if: github.event.action != 'closed'
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
-
       - name: Set up Docker Buildx
         if: github.event.action != 'closed'
         uses: docker/setup-buildx-action@v2
 
-      - name: Login to GCP Container Registry
+      - name: Login to GitHub Container Registry
         if: github.event.action != 'closed'
         uses: docker/login-action@v2
         with:
-          registry: europe-west1-docker.pkg.dev
-          username: _json_key
-          password: ${{ secrets.GCP_CREDENTIALS }}
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
         if: github.event.action != 'closed'
@@ -106,71 +100,65 @@ jobs:
         with:
           context: .
           push: true
-          tags: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+          tags: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Connect to Tailscale
-        uses: tailscale/github-action@v2
+      # Use the custom PR Environment action
+      - name: Manage PR Environment
+        uses: vertuoza/github-actions/pr-environment@main
         with:
-          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:github-actions
-
-      - name: Create/Update PR environment
-        if: github.event.action != 'closed'
-        run: |
-          # Create or update the environment
-          curl -X POST https://pr-env-api.tailf31c84.ts.net/api/environments \
-            -H "Content-Type: application/json" \
-            -d '{
-              "service_name": "${{ steps.env.outputs.SERVICE_NAME }}",
-              "pr_number": ${{ steps.env.outputs.PR_NUMBER }},
-              "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
-            }'
-
-      - name: Comment on PR
-        if: github.event.action != 'closed'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const url = `https://${{ steps.env.outputs.DOMAIN }}`;
-
-            github.rest.issues.createComment({
-              issue_number: ${{ steps.env.outputs.PR_NUMBER }},
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🚀 PR environment deployed at: ${url}\n\nThis environment will be automatically updated when you push new commits to this PR.`
-            });
-
-      # Handle PR closed
-      - name: Remove PR environment
-        if: github.event.action == 'closed'
-        run: |
-          curl -X DELETE https://pr-env-api.tailf31c84.ts.net/api/environments/${{ steps.env.outputs.SERVICE_NAME }}-pr-${{ steps.env.outputs.PR_NUMBER }}
-
-      - name: Comment on PR about removal
-        if: github.event.action == 'closed'
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.issues.createComment({
-              issue_number: ${{ steps.env.outputs.PR_NUMBER }},
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `🧹 PR environment has been removed.`
-            });
+          service_name: ${{ steps.env.outputs.SERVICE_NAME }}
+          pr_number: ${{ steps.env.outputs.PR_NUMBER }}
+          pr_action: ${{ steps.env.outputs.PR_ACTION }}
+          image_url: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ### 4. Customize the Workflow
 
 Customize the workflow file as needed for your repository:
 
-- Update the Docker image registry if needed
 - Adjust the environment variables
-- Modify the PR comment template
+- Modify the custom action inputs if needed
+
+## Custom GitHub Action
+
+The workflow above uses a custom GitHub Action that encapsulates the PR environment management logic. This action is maintained in the github-actions repository and provides a consistent way to manage PR environments across all services.
+
+### Action Inputs
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `service_name` | Name of the service | Yes | |
+| `pr_number` | PR number | Yes | |
+| `pr_action` | PR action (opened, synchronize, reopened, closed) | Yes | |
+| `image_url` | Docker image URL | No | '' |
+| `github_token` | GitHub token for commenting on PRs | Yes | |
+| `api_url` | URL of the PR Environment API | No | 'https://pr-env-api.tailf31c84.ts.net' |
+| `tailscale_domain` | Tailscale domain for the PR environment | No | 'tailf31c84.ts.net' |
+
+### Action Outputs
+
+| Output | Description |
+|--------|-------------|
+| `environment_url` | URL of the PR environment |
+| `environment_id` | ID of the PR environment |
+
+### How the Action Works
+
+The custom action:
+
+1. Connects to Tailscale using the OAuth credentials stored in the github-actions repository
+2. Calls the PR Environment API to create, update, or remove environments based on the PR action
+3. Comments on the PR with the environment URL or removal notification
+
+### Benefits of Using the Custom Action
+
+- **Maintainability**: Changes to the PR environment workflow only need to be made in one place
+- **Consistency**: All services use the same workflow
+- **Security**: Tailscale OAuth credentials are stored only in the github-actions repository
+- **Flexibility**: The custom action can be versioned and updated independently
 
 ## Project Structure
 
@@ -221,10 +209,16 @@ Create a pull request in your repository to test the integration. The GitHub Act
 
 ### Tailscale Connection Issues
 
-- Check that the Tailscale OAuth credentials are correct
+- Check that the Tailscale OAuth credentials are correct in the github-actions repository
 - Verify that the GitHub Actions runner has been added to your Tailscale network
 - Check the Tailscale ACLs to ensure the GitHub Actions runner has access to the PR Environment API Server
 - Look for Tailscale connection errors in the GitHub Actions logs
+
+### GitHub Container Registry Issues
+
+- Check that the workflow has the necessary permissions to push to the GitHub Container Registry
+- Verify that the repository visibility settings allow for the desired package visibility
+- Look for authentication errors in the GitHub Actions logs
 
 ## Advanced Configuration
 
@@ -233,6 +227,7 @@ Create a pull request in your repository to test the integration. The GitHub Act
 If you're using a different container registry, update the workflow file accordingly:
 
 ```yaml
+# For Docker Hub
 - name: Login to Docker Hub
   if: github.event.action != 'closed'
   uses: docker/login-action@v2
@@ -249,31 +244,58 @@ If you're using a different container registry, update the workflow file accordi
     tags: yourusername/yourrepo:pr-${{ steps.env.outputs.PR_NUMBER }}
 ```
 
+```yaml
+# For Google Container Registry
+- name: Setup GCP credentials
+  if: github.event.action != 'closed'
+  uses: google-github-actions/auth@v1
+  with:
+    credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+- name: Login to GCP Container Registry
+  if: github.event.action != 'closed'
+  uses: docker/login-action@v2
+  with:
+    registry: europe-west1-docker.pkg.dev
+    username: _json_key
+    password: ${{ secrets.GCP_CREDENTIALS }}
+
+- name: Build and push Docker image
+  if: github.event.action != 'closed'
+  uses: docker/build-push-action@v4
+  with:
+    context: .
+    push: true
+    tags: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+```
+
 ### Using a Different Domain
 
-If you're using a different domain, update the workflow file accordingly:
+If you're using a different Tailscale domain, specify it in the custom action:
 
 ```yaml
-- name: Set environment variables
-  id: env
-  run: |
-    echo "SERVICE_NAME=$(echo ${{ github.repository }} | cut -d '/' -f 2)" >> $GITHUB_OUTPUT
-    echo "PR_NUMBER=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-    echo "PR_ACTION=${{ github.event.action }}" >> $GITHUB_OUTPUT
-    echo "DOMAIN=${SERVICE_NAME}-pr-${PR_NUMBER}.yourdomain.com" >> $GITHUB_OUTPUT
+- name: Manage PR Environment
+  uses: vertuoza/github-actions/pr-environment@main
+  with:
+    service_name: ${{ steps.env.outputs.SERVICE_NAME }}
+    pr_number: ${{ steps.env.outputs.PR_NUMBER }}
+    pr_action: ${{ steps.env.outputs.PR_ACTION }}
+    image_url: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    tailscale_domain: your-custom-domain.ts.net
 ```
 
 ### Using a Different API Server URL
 
-If your API server is at a different URL, update the workflow file accordingly:
+If your API server is at a different URL, specify it in the custom action:
 
 ```yaml
-- name: Create/Update PR environment
-  if: github.event.action != 'closed'
-  run: |
-    # ... (rest of the step)
-    curl -X POST https://your-api-server-url/api/environments \
-      -H "Content-Type: application/json" \
-      -d '{
-        # ... (rest of the request body)
-      }'
+- name: Manage PR Environment
+  uses: vertuoza/github-actions/pr-environment@main
+  with:
+    service_name: ${{ steps.env.outputs.SERVICE_NAME }}
+    pr_number: ${{ steps.env.outputs.PR_NUMBER }}
+    pr_action: ${{ steps.env.outputs.PR_ACTION }}
+    image_url: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+    github_token: ${{ secrets.GITHUB_TOKEN }}
+    api_url: https://your-custom-api-url.example.com

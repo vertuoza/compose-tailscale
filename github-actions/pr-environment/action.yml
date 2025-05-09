@@ -1,0 +1,106 @@
+name: 'PR Environment'
+description: 'Create, update, or remove PR environments using the PR Environment API'
+author: 'Vertuoza'
+
+inputs:
+  service_name:
+    description: 'Name of the service'
+    required: true
+  pr_number:
+    description: 'PR number'
+    required: true
+  pr_action:
+    description: 'PR action (opened, synchronize, reopened, closed)'
+    required: true
+  image_url:
+    description: 'Docker image URL'
+    required: false
+    default: ''
+  github_token:
+    description: 'GitHub token for commenting on PRs'
+    required: true
+  api_url:
+    description: 'URL of the PR Environment API'
+    required: false
+    default: 'https://pr-env-api.tailf31c84.ts.net'
+  tailscale_domain:
+    description: 'Tailscale domain for the PR environment'
+    required: false
+    default: 'tailf31c84.ts.net'
+
+outputs:
+  environment_url:
+    description: 'URL of the PR environment'
+    value: ${{ steps.set-url.outputs.url }}
+  environment_id:
+    description: 'ID of the PR environment'
+    value: ${{ steps.set-id.outputs.id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set environment ID
+      id: set-id
+      shell: bash
+      run: |
+        echo "id=${{ inputs.service_name }}-pr-${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
+
+    - name: Set environment URL
+      id: set-url
+      shell: bash
+      run: |
+        echo "url=https://${{ inputs.service_name }}-pr-${{ inputs.pr_number }}.${{ inputs.tailscale_domain }}" >> $GITHUB_OUTPUT
+
+    - name: Connect to Tailscale
+      uses: tailscale/github-action@v2
+      with:
+        oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+        oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+        tags: tag:github-actions
+
+    - name: Create/Update PR environment
+      if: inputs.pr_action != 'closed'
+      shell: bash
+      run: |
+        # Create or update the environment
+        curl -X POST ${{ inputs.api_url }}/api/environments \
+          -H "Content-Type: application/json" \
+          -d '{
+            "service_name": "${{ inputs.service_name }}",
+            "pr_number": ${{ inputs.pr_number }},
+            "image_url": "${{ inputs.image_url }}"
+          }'
+
+    - name: Comment on PR about creation/update
+      if: inputs.pr_action != 'closed'
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const url = `${{ steps.set-url.outputs.url }}`;
+
+          github.rest.issues.createComment({
+            issue_number: ${{ inputs.pr_number }},
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `🚀 PR environment deployed at: ${url}\n\nThis environment will be automatically updated when you push new commits to this PR.`
+          });
+
+    - name: Remove PR environment
+      if: inputs.pr_action == 'closed'
+      shell: bash
+      run: |
+        curl -X DELETE ${{ inputs.api_url }}/api/environments/${{ steps.set-id.outputs.id }}
+
+    - name: Comment on PR about removal
+      if: inputs.pr_action == 'closed'
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          github.rest.issues.createComment({
+            issue_number: ${{ inputs.pr_number }},
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `🧹 PR environment has been removed.`
+          });
