@@ -94,7 +94,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push main service image
         if: github.event.action != 'closed'
         uses: docker/build-push-action@v4
         with:
@@ -104,14 +104,34 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push migrations image
+        if: github.event.action != 'closed'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./migrations  # Adjust this path to where your migrations Dockerfile is located
+          push: true
+          tags: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}-migrations:pr-${{ steps.env.outputs.PR_NUMBER }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       # Use the custom PR Environment action
       - name: Manage PR Environment
         uses: vertuoza/github-actions/pr-environment@main
         with:
-          service_name: ${{ steps.env.outputs.SERVICE_NAME }}
+          repository_name: ${{ steps.env.outputs.SERVICE_NAME }}
           pr_number: ${{ steps.env.outputs.PR_NUMBER }}
           pr_action: ${{ steps.env.outputs.PR_ACTION }}
-          image_url: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+          services_json: |
+            [
+              {
+                "name": "${{ steps.env.outputs.SERVICE_NAME }}",
+                "image_url": "ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
+              },
+              {
+                "name": "${{ steps.env.outputs.SERVICE_NAME }}-migrations",
+                "image_url": "ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}-migrations:pr-${{ steps.env.outputs.PR_NUMBER }}"
+              }
+            ]
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
@@ -130,10 +150,10 @@ The workflow above uses a custom GitHub Action that encapsulates the PR environm
 
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
-| `service_name` | Name of the service | Yes | |
+| `repository_name` | Name of the repository | Yes | |
 | `pr_number` | PR number | Yes | |
 | `pr_action` | PR action (opened, synchronize, reopened, closed) | Yes | |
-| `image_url` | Docker image URL | No | '' |
+| `services_json` | JSON array of services with name and image_url properties | Yes | |
 | `github_token` | GitHub token for commenting on PRs | Yes | |
 | `api_url` | URL of the PR Environment API | No | 'https://pr-env-api.tailf31c84.ts.net' |
 | `tailscale_domain` | Tailscale domain for the PR environment | No | 'tailf31c84.ts.net' |
@@ -277,13 +297,21 @@ If you're using a different Tailscale domain, specify it in the custom action:
 - name: Manage PR Environment
   uses: vertuoza/github-actions/pr-environment@main
   with:
-    service_name: ${{ steps.env.outputs.SERVICE_NAME }}
+    repository_name: ${{ steps.env.outputs.SERVICE_NAME }}
     pr_number: ${{ steps.env.outputs.PR_NUMBER }}
     pr_action: ${{ steps.env.outputs.PR_ACTION }}
-    image_url: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+    services_json: |
+      [
+        {
+          "name": "${{ steps.env.outputs.SERVICE_NAME }}",
+          "image_url": "ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
+        }
+      ]
     github_token: ${{ secrets.GITHUB_TOKEN }}
     tailscale_domain: your-custom-domain.ts.net
 ```
+
+> **Note**: The environment ID is constructed using the repository name (`{repository_name}-pr-{pr_number}`). When removing an environment, the API extracts the repository name from this ID, so you don't need to provide it separately.
 
 ### Using a Different API Server URL
 
@@ -293,9 +321,16 @@ If your API server is at a different URL, specify it in the custom action:
 - name: Manage PR Environment
   uses: vertuoza/github-actions/pr-environment@main
   with:
-    service_name: ${{ steps.env.outputs.SERVICE_NAME }}
+    repository_name: ${{ steps.env.outputs.SERVICE_NAME }}
     pr_number: ${{ steps.env.outputs.PR_NUMBER }}
     pr_action: ${{ steps.env.outputs.PR_ACTION }}
-    image_url: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+    services_json: |
+      [
+        {
+          "name": "${{ steps.env.outputs.SERVICE_NAME }}",
+          "image_url": "ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
+        }
+      ]
     github_token: ${{ secrets.GITHUB_TOKEN }}
     api_url: https://your-custom-api-url.example.com
+```

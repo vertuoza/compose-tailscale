@@ -9,13 +9,13 @@ const environmentsDir = fileSystem.joinPath(__dirname, '../../data/environments'
 const tailscaleDomain = process.env.TAILSCALE_DOMAIN || 'tailf31c84.ts.net';
 
 /**
- * Create environment ID from service name and PR number
- * @param {string} serviceName - Service name
+ * Create environment ID from repository name and PR number
+ * @param {string} repositoryName - Repository name
  * @param {number} prNumber - PR number
  * @returns {string} - Environment ID
  */
-function createEnvironmentId(serviceName, prNumber) {
-  return `${serviceName}-pr-${prNumber}`;
+function createEnvironmentId(repositoryName, prNumber) {
+  return `${repositoryName}-pr-${prNumber}`;
 }
 
 /**
@@ -38,16 +38,17 @@ function createEnvironmentUrl(environmentId) {
 
 /**
  * Update environment files by replacing tailscale-subdomain with the specific PR environment subdomain
+ * and updating multiple services in the docker-compose file
  * @param {string} environmentDir - Environment directory
- * @param {string} serviceName - Service name
+ * @param {string} repositoryName - Repository name
  * @param {number} prNumber - PR number
- * @param {string} imageUrl - Docker image URL
+ * @param {Array} services - Array of services with name and image_url
  * @returns {Promise<void>}
  */
-async function updateEnvironmentFiles(environmentDir, serviceName, prNumber, imageUrl) {
+async function updateEnvironmentFiles(environmentDir, repositoryName, prNumber, services) {
   try {
-    // Create environment ID (subdomain)
-    const environmentId = createEnvironmentId(serviceName, prNumber);
+    // Create environment ID (subdomain) using repository name
+    const environmentId = createEnvironmentId(repositoryName, prNumber);
 
     // Update .env file if it exists
     const envPath = fileSystem.joinPath(environmentDir, '.env');
@@ -72,14 +73,19 @@ async function updateEnvironmentFiles(environmentDir, serviceName, prNumber, ima
     // Parse the updated content to YAML
     const compose = yaml.parse(composeContent);
 
-    // Update the service image if it exists in the compose file
-    if (compose.services && compose.services[serviceName]) {
-      compose.services[serviceName].image = imageUrl;
+    // Update multiple services in the compose file
+    for (const service of services) {
+      if (compose.services && compose.services[service.name]) {
+        compose.services[service.name].image = service.image_url;
+        logger.info(`Updated service ${service.name} with image ${service.image_url}`);
+      } else {
+        logger.warn(`Service ${service.name} not found in docker-compose.yml`);
+      }
     }
 
     // Write updated docker-compose.yml
     await fileSystem.writeFile(composePath, yaml.stringify(compose));
-    logger.info(`Updated docker-compose.yml at ${composePath} with subdomain ${environmentId}`);
+    logger.info(`Updated docker-compose.yml at ${composePath} with subdomain ${environmentId} and ${services.length} services`);
   } catch (err) {
     logger.error(`Error updating environment files: ${err.message}`);
     throw err;

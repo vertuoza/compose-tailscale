@@ -26,11 +26,11 @@ function setupDatabase() {
     db.run(`
       CREATE TABLE IF NOT EXISTS environments (
         id TEXT PRIMARY KEY,
-        service_name TEXT NOT NULL,
+        repository_name TEXT NOT NULL,
+        services_data TEXT NOT NULL,
         pr_number INTEGER NOT NULL,
         status TEXT NOT NULL,
         url TEXT NOT NULL,
-        image_url TEXT NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )

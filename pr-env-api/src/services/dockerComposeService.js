@@ -9,15 +9,15 @@ const {
 
 /**
  * Copy and configure vertuoza-compose folder for PR environment
- * @param {string} serviceName - Service name
+ * @param {string} repositoryName - Repository name
  * @param {number} prNumber - PR number
- * @param {string} imageUrl - Docker image URL
+ * @param {Array} services - Array of services with name and image_url
  * @returns {Promise<string>} - Path to the configured folder
  */
-async function setupPrEnvironment(serviceName, prNumber, imageUrl) {
+async function setupPrEnvironment(repositoryName, prNumber, services) {
   try {
-    // Create environment ID
-    const environmentId = createEnvironmentId(serviceName, prNumber);
+    // Create environment ID using repository name
+    const environmentId = createEnvironmentId(repositoryName, prNumber);
 
     // Create environment directory
     const environmentDir = getEnvironmentDir(environmentId);
@@ -29,10 +29,10 @@ async function setupPrEnvironment(serviceName, prNumber, imageUrl) {
     // Copy the entire vertuoza-compose folder contents directly to the environment directory
     await fileSystem.copyDirectory(sourceDir, environmentDir);
 
-    // Update environment files with PR-specific configuration
-    await updateEnvironmentFiles(environmentDir, serviceName, prNumber, imageUrl);
+    // Update environment files with PR-specific configuration and multiple services
+    await updateEnvironmentFiles(environmentDir, repositoryName, prNumber, services);
 
-    logger.info(`Set up PR environment at ${environmentDir}`);
+    logger.info(`Set up PR environment at ${environmentDir} with ${services.length} services`);
 
     return environmentDir;
   } catch (err) {

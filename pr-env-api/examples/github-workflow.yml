@@ -33,7 +33,7 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
+      - name: Build and push main service image
         if: github.event.action != 'closed'
         uses: docker/build-push-action@v4
         with:
@@ -43,12 +43,32 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push migrations image
+        if: github.event.action != 'closed'
+        uses: docker/build-push-action@v4
+        with:
+          context: ./migrations  # Adjust this path to where your migrations Dockerfile is located
+          push: true
+          tags: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}-migrations:pr-${{ steps.env.outputs.PR_NUMBER }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       # Use the custom PR Environment action
       - name: Manage PR Environment
         uses: vertuoza/github-actions/pr-environment@main
         with:
-          service_name: ${{ steps.env.outputs.SERVICE_NAME }}
+          repository_name: ${{ steps.env.outputs.SERVICE_NAME }}
           pr_number: ${{ steps.env.outputs.PR_NUMBER }}
           pr_action: ${{ steps.env.outputs.PR_ACTION }}
-          image_url: ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}
+          services_json: |
+            [
+              {
+                "name": "${{ steps.env.outputs.SERVICE_NAME }}",
+                "image_url": "ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}:pr-${{ steps.env.outputs.PR_NUMBER }}"
+              },
+              {
+                "name": "${{ steps.env.outputs.SERVICE_NAME }}-migrations",
+                "image_url": "ghcr.io/vertuoza/${{ steps.env.outputs.SERVICE_NAME }}-migrations:pr-${{ steps.env.outputs.PR_NUMBER }}"
+              }
+            ]
           github_token: ${{ secrets.GITHUB_TOKEN }}

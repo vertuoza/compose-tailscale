@@ -3,8 +3,8 @@ description: 'Create, update, or remove PR environments using the PR Environment
 author: 'Vertuoza'
 
 inputs:
-  service_name:
-    description: 'Name of the service'
+  repository_name:
+    description: 'Name of the repository'
     required: true
   pr_number:
     description: 'PR number'
@@ -12,10 +12,9 @@ inputs:
   pr_action:
     description: 'PR action (opened, synchronize, reopened, closed)'
     required: true
-  image_url:
-    description: 'Docker image URL'
-    required: false
-    default: ''
+  services_json:
+    description: 'JSON array of services with name and image_url properties'
+    required: true
   github_token:
     description: 'GitHub token for commenting on PRs'
     required: true
@@ -43,13 +42,13 @@ runs:
       id: set-id
       shell: bash
       run: |
-        echo "id=${{ inputs.service_name }}-pr-${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
+        echo "id=${{ inputs.repository_name }}-pr-${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
 
     - name: Set environment URL
       id: set-url
       shell: bash
       run: |
-        echo "url=https://${{ inputs.service_name }}-pr-${{ inputs.pr_number }}.${{ inputs.tailscale_domain }}" >> $GITHUB_OUTPUT
+        echo "url=https://${{ inputs.repository_name }}-pr-${{ inputs.pr_number }}.${{ inputs.tailscale_domain }}" >> $GITHUB_OUTPUT
 
     - name: Connect to Tailscale
       uses: tailscale/github-action@v2
@@ -66,9 +65,9 @@ runs:
         curl -X POST ${{ inputs.api_url }}/api/environments \
           -H "Content-Type: application/json" \
           -d '{
-            "service_name": "${{ inputs.service_name }}",
+            "repository_name": "${{ inputs.repository_name }}",
             "pr_number": ${{ inputs.pr_number }},
-            "image_url": "${{ inputs.image_url }}"
+            "services": ${{ inputs.services_json }}
           }'
 
     - name: Comment on PR about creation/update
@@ -90,7 +89,7 @@ runs:
       if: inputs.pr_action == 'closed'
       shell: bash
       run: |
-        curl -X DELETE ${{ inputs.api_url }}/api/environments/${{ steps.set-id.outputs.id }}
+        curl -X DELETE "${{ inputs.api_url }}/api/environments/${{ steps.set-id.outputs.id }}"
 
     - name: Comment on PR about removal
       if: inputs.pr_action == 'closed'
