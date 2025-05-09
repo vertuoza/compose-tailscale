@@ -206,4 +206,32 @@ router.get('/:id/logs', async (req, res) => {
   }
 });
 
+/**
+ * Set up a local environment for testing without modifying service configurations
+ * POST /api/environments/local-setup
+ */
+router.post('/local-setup', async (req, res) => {
+  try {
+    const { repository_name, pr_number } = req.body;
+
+    // Validate required fields
+    if (!repository_name) {
+      return res.status(400).json({ error: 'repository_name is required' });
+    }
+
+    if (!pr_number) {
+      return res.status(400).json({ error: 'pr_number is required' });
+    }
+
+    // Set up local environment with default services
+    // We pass an empty array for services
+    const environment = await createEnvironment(repository_name, pr_number, []);
+
+    return res.status(201).json(environment);
+  } catch (err) {
+    logger.error(`Error setting up local environment: ${err.message}`);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
