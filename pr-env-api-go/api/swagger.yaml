@@ -1,0 +1,417 @@
+openapi: 3.0.0
+info:
+  title: PR Environment API
+  description: API for managing PR environments with Docker Compose and Tailscale
+  version: 1.0.0
+  contact:
+    name: Vertuoza
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server
+
+tags:
+  - name: environments
+    description: Operations related to PR environments
+  - name: health
+    description: Health check endpoint
+
+paths:
+  /api/environments:
+    get:
+      summary: List all environments
+      description: Returns a list of all PR environments, with optional filtering
+      tags:
+        - environments
+      parameters:
+        - name: status
+          in: query
+          description: Filter by environment status
+          schema:
+            type: string
+            enum: [running, removed]
+        - name: repository_name
+          in: query
+          description: Filter by repository name
+          schema:
+            type: string
+        - name: pr_number
+          in: query
+          description: Filter by PR number
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  environments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Environment'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create a new PR environment
+      description: Creates a new PR environment with Docker Compose
+      tags:
+        - environments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - repository_name
+                - pr_number
+                - services
+              properties:
+                repository_name:
+                  type: string
+                  description: Name of the repository
+                pr_number:
+                  type: integer
+                  description: PR number
+                services:
+                  type: array
+                  description: List of services to deploy
+                  items:
+                    $ref: '#/components/schemas/Service'
+      responses:
+        '201':
+          description: Environment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/environments/{id}:
+    get:
+      summary: Get environment details
+      description: Returns details of a specific PR environment
+      tags:
+        - environments
+      parameters:
+        - name: id
+          in: path
+          description: Environment ID (format: {repository_name}-pr-{pr_number})
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+        '404':
+          description: Environment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update an existing PR environment
+      description: Updates an existing PR environment
+      tags:
+        - environments
+      parameters:
+        - name: id
+          in: path
+          description: Environment ID (format: {repository_name}-pr-{pr_number})
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - repository_name
+                - services
+              properties:
+                repository_name:
+                  type: string
+                  description: Name of the repository
+                services:
+                  type: array
+                  description: List of services to deploy
+                  items:
+                    $ref: '#/components/schemas/Service'
+      responses:
+        '200':
+          description: Environment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Environment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Remove a PR environment
+      description: Removes a PR environment
+      tags:
+        - environments
+      parameters:
+        - name: id
+          in: path
+          description: Environment ID (format: {repository_name}-pr-{pr_number})
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Environment removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+        '404':
+          description: Environment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/environments/{id}/logs:
+    get:
+      summary: Get environment logs
+      description: Returns logs for a specific PR environment
+      tags:
+        - environments
+      parameters:
+        - name: id
+          in: path
+          description: Environment ID (format: {repository_name}-pr-{pr_number})
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EnvironmentLog'
+        '404':
+          description: Environment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/environments/local-setup:
+    post:
+      summary: Set up a local environment for testing
+      description: Creates a local environment for testing without modifying service configurations
+      tags:
+        - environments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - repository_name
+                - pr_number
+              properties:
+                repository_name:
+                  type: string
+                  description: Name of the repository
+                pr_number:
+                  type: integer
+                  description: PR number
+      responses:
+        '201':
+          description: Environment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Environment'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /health:
+    get:
+      summary: Health check
+      description: Returns the health status of the API
+      tags:
+        - health
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+components:
+  schemas:
+    Environment:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Environment ID (format: {repository_name}-pr-{pr_number})
+          example: test-repo-pr-123
+        repositoryName:
+          type: string
+          description: Name of the repository
+          example: test-repo
+        prNumber:
+          type: integer
+          description: PR number
+          example: 123
+        status:
+          type: string
+          description: Environment status
+          enum: [running, removed]
+          example: running
+        url:
+          type: string
+          description: URL to access the environment
+          example: https://test-repo-pr-123.example.com
+        services:
+          type: array
+          description: List of services deployed in the environment
+          items:
+            $ref: '#/components/schemas/Service'
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: 2023-01-01T00:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: 2023-01-01T00:00:00Z
+
+    Service:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Service name
+          example: web
+        imageUrl:
+          type: string
+          description: Docker image URL
+          example: nginx:latest
+
+    EnvironmentLog:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Log ID
+          example: 1
+        environmentId:
+          type: string
+          description: Environment ID
+          example: test-repo-pr-123
+        action:
+          type: string
+          description: Action performed
+          enum: [create, update, remove]
+          example: create
+        status:
+          type: string
+          description: Action status
+          enum: [success, error]
+          example: success
+        message:
+          type: string
+          description: Log message
+          example: Environment created successfully with 2 services
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: 2023-01-01T00:00:00Z
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: Invalid request

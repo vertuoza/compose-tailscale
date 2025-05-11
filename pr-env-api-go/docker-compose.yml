@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pr-env-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PORT=3000
+      - NODE_ENV=development
+      - TAILSCALE_DOMAIN=${TAILSCALE_DOMAIN}
+      - TAILSCALE_AUTH_KEY=${TAILSCALE_AUTH_KEY}
+      - DB_PATH=/app/data/pr-environments.db
+      - LOG_LEVEL=info
+      - DATA_DIR=/app/data
+    networks:
+      - pr-env-network
+
+networks:
+  pr-env-network:
+    driver: bridge
