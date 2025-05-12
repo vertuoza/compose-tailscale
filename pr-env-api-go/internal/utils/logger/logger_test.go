@@ -14,9 +14,9 @@ func TestLoggerSetup(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Override the global logger for testing
-	originalLogger := zapLogger
+	originalLogger := log
 	defer func() {
-		zapLogger = originalLogger
+		log = originalLogger
 	}()
 
 	// Create a custom encoder configuration
@@ -25,7 +25,7 @@ func TestLoggerSetup(t *testing.T) {
 
 	// Create a custom core that writes to our buffer
 	core := zapcore.NewCore(encoder, zapcore.AddSync(&buf), zapcore.InfoLevel)
-	zapLogger = zap.New(core)
+	log = zap.New(core)
 
 	// Test Info logging
 	Info("test info message", zap.String("key", "value"))

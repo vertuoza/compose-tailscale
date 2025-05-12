@@ -68,3 +68,19 @@ func With(fields ...zap.Field) *zap.Logger {
 func Sync() error {
 	return log.Sync()
 }
+
+// getLogLevel parses a string log level into a zapcore.Level
+func getLogLevel(level string) zapcore.Level {
+	switch level {
+	case "debug":
+		return zapcore.DebugLevel
+	case "info":
+		return zapcore.InfoLevel
+	case "warn":
+		return zapcore.WarnLevel
+	case "error":
+		return zapcore.ErrorLevel
+	default:
+		return zapcore.InfoLevel
+	}
+}

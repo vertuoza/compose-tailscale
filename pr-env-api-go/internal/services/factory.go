@@ -1,6 +1,7 @@
 package services
 
 import (
+	"github.com/vertuoza/pr-env-api/internal/interfaces/services"
 	"github.com/vertuoza/pr-env-api/internal/repositories"
 	"github.com/vertuoza/pr-env-api/internal/services/dockercompose"
 	"github.com/vertuoza/pr-env-api/internal/services/environment"
@@ -10,9 +11,9 @@ import (
 
 // Factory creates service instances
 type Factory struct {
-	repoFactory    *repositories.Factory
-	cmdExecutor    *commandexecutor.CommandExecutor
-	envConfig      *envconfig.EnvironmentConfig
+	repoFactory *repositories.Factory
+	cmdExecutor *commandexecutor.CommandExecutor
+	envConfig   *envconfig.EnvironmentConfig
 }
 
 // NewFactory creates a new service factory
@@ -29,12 +30,12 @@ func NewFactory(
 }
 
 // NewDockerComposeService creates a new Docker Compose service
-func (f *Factory) NewDockerComposeService() DockerComposeService {
+func (f *Factory) NewDockerComposeService() services.DockerComposeService {
 	return dockercompose.NewService(f.cmdExecutor, f.envConfig)
 }
 
 // NewEnvironmentService creates a new environment service
-func (f *Factory) NewEnvironmentService() EnvironmentService {
+func (f *Factory) NewEnvironmentService() services.EnvironmentService {
 	dockerComposeService := f.NewDockerComposeService()
 	environmentRepo := f.repoFactory.NewEnvironmentRepository()
 	environmentLogRepo := f.repoFactory.NewEnvironmentLogRepository()

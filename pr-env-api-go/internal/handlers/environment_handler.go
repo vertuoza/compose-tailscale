@@ -1,14 +1,13 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/vertuoza/pr-env-api/internal/interfaces/services"
 	"github.com/vertuoza/pr-env-api/internal/models"
-	"github.com/vertuoza/pr-env-api/internal/services"
 	"github.com/vertuoza/pr-env-api/internal/utils/logger"
 	"go.uber.org/zap"
 )
@@ -28,8 +27,8 @@ func NewEnvironmentHandler(environmentService services.EnvironmentService) *Envi
 // CreateEnvironment handles POST /api/environments
 func (h *EnvironmentHandler) CreateEnvironment(c *gin.Context) {
 	var req struct {
-		RepositoryName string          `json:"repository_name" binding:"required"`
-		PRNumber       int             `json:"pr_number" binding:"required"`
+		RepositoryName string           `json:"repository_name" binding:"required"`
+		PRNumber       int              `json:"pr_number" binding:"required"`
 		Services       []models.Service `json:"services" binding:"required"`
 	}
 
@@ -87,7 +86,7 @@ func (h *EnvironmentHandler) UpdateEnvironment(c *gin.Context) {
 	}
 
 	var req struct {
-		RepositoryName string          `json:"repository_name" binding:"required"`
+		RepositoryName string           `json:"repository_name" binding:"required"`
 		Services       []models.Service `json:"services" binding:"required"`
 	}
 

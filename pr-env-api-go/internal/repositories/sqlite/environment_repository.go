@@ -14,11 +14,11 @@ import (
 
 // EnvironmentRepository is a SQLite implementation of the EnvironmentRepository interface
 type EnvironmentRepository struct {
-	db *sql.DB
+	db database.DBInterface
 }
 
 // NewEnvironmentRepository creates a new SQLite environment repository
-func NewEnvironmentRepository(db *sql.DB) *EnvironmentRepository {
+func NewEnvironmentRepository(db database.DBInterface) *EnvironmentRepository {
 	return &EnvironmentRepository{
 		db: db,
 	}

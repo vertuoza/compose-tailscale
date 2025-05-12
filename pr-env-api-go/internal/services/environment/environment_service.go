@@ -3,9 +3,9 @@ package environment
 import (
 	"fmt"
 
+	"github.com/vertuoza/pr-env-api/internal/interfaces/services"
 	"github.com/vertuoza/pr-env-api/internal/models"
 	"github.com/vertuoza/pr-env-api/internal/repositories"
-	"github.com/vertuoza/pr-env-api/internal/services"
 	"github.com/vertuoza/pr-env-api/internal/utils/envconfig"
 	"github.com/vertuoza/pr-env-api/internal/utils/logger"
 	"go.uber.org/zap"

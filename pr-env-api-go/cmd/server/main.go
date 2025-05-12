@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/vertuoza/pr-env-api/internal/utils/envconfig"
 	"github.com/vertuoza/pr-env-api/internal/utils/filesystem"
 	"github.com/vertuoza/pr-env-api/internal/utils/logger"
+	"go.uber.org/zap"
 )
 
 func main() {
@@ -47,7 +47,7 @@ func main() {
 	// Initialize database
 	db, err := database.Setup(cfg.DBPath)
 	if err != nil {
-		logger.Fatal("Failed to set up database", err)
+		logger.Fatal("Failed to set up database", zap.Error(err))
 	}
 	defer database.Close()
 
@@ -62,20 +62,20 @@ func main() {
 
 	// Create HTTP server
 	port := cfg.Port
-	if port == 0 {
-		port = 3000 // Default port
+	if port == "" {
+		port = "3000" // Default port
 	}
 
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
+		Addr:    ":" + port,
 		Handler: router,
 	}
 
 	// Start server in a goroutine
 	go func() {
-		logger.Info(fmt.Sprintf("PR Environment API Server started on port %d", port))
+		logger.Info(fmt.Sprintf("PR Environment API Server started on port %s", port))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("Failed to start server", err)
+			logger.Fatal("Failed to start server", zap.Error(err))
 		}
 	}()
 
@@ -92,7 +92,7 @@ func main() {
 
 	// Attempt graceful shutdown
 	if err := server.Shutdown(ctx); err != nil {
-		logger.Fatal("Server forced to shutdown", err)
+		logger.Fatal("Server forced to shutdown", zap.Error(err))
 	}
 
 	logger.Info("Server exiting")

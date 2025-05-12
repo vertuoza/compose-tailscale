@@ -3,6 +3,7 @@ package sqlite
 import (
 	"database/sql"
 
+	"github.com/vertuoza/pr-env-api/internal/database"
 	"github.com/vertuoza/pr-env-api/internal/models"
 	"github.com/vertuoza/pr-env-api/internal/utils/logger"
 	"go.uber.org/zap"
@@ -10,11 +11,11 @@ import (
 
 // EnvironmentLogRepository is a SQLite implementation of the EnvironmentLogRepository interface
 type EnvironmentLogRepository struct {
-	db *sql.DB
+	db database.DBInterface
 }
 
 // NewEnvironmentLogRepository creates a new SQLite environment log repository
-func NewEnvironmentLogRepository(db *sql.DB) *EnvironmentLogRepository {
+func NewEnvironmentLogRepository(db database.DBInterface) *EnvironmentLogRepository {
 	return &EnvironmentLogRepository{
 		db: db,
 	}

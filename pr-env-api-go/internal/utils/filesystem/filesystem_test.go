@@ -57,18 +57,30 @@ func TestFileExists(t *testing.T) {
 	}
 
 	// Test with existing file
-	if exists := FileExists(testFile); !exists {
+	exists, err := FileExists(testFile)
+	if err != nil {
+		t.Errorf("FileExists returned error for existing file: %v", err)
+	}
+	if !exists {
 		t.Errorf("FileExists returned false for existing file")
 	}
 
 	// Test with non-existing file
 	nonExistingFile := filepath.Join(tempDir, "non_existing.txt")
-	if exists := FileExists(nonExistingFile); exists {
+	exists, err = FileExists(nonExistingFile)
+	if err != nil {
+		t.Errorf("FileExists returned error for non-existing file: %v", err)
+	}
+	if exists {
 		t.Errorf("FileExists returned true for non-existing file")
 	}
 
 	// Test with directory
-	if exists := FileExists(tempDir); exists {
+	exists, err = FileExists(tempDir)
+	if err != nil {
+		t.Errorf("FileExists returned error for directory: %v", err)
+	}
+	if exists {
 		t.Errorf("FileExists returned true for directory")
 	}
 }
