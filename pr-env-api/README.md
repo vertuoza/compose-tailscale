@@ -10,7 +10,7 @@ This API server provides endpoints for creating, updating, and deleting PR envir
 
 - Create PR environments with Docker Compose
 - Update existing PR environments
-- Remove PR environments
+- Remove PR environments with automatic Tailscale machine cleanup
 - Track environment status and logs
 - Tailscale integration for secure networking
 
@@ -75,10 +75,14 @@ The API server can be configured using environment variables:
 | `NODE_ENV` | Node environment | `production` |
 | `TAILSCALE_DOMAIN` | Tailscale domain | `tailf31c84.ts.net` |
 | `TAILSCALE_AUTH_KEY` | Tailscale auth key | None (required) |
+| `TAILSCALE_API_KEY` | Tailscale API key for machine management | None (required for machine cleanup) |
+| `TAILSCALE_TAILNET` | Your Tailscale tailnet name | None (required for machine cleanup) |
 | `DB_PATH` | Path to SQLite database | `/app/data/pr-environments.db` |
 | `LOG_LEVEL` | Logging level | `info` |
 
 > **Security Note**: The `TAILSCALE_AUTH_KEY` is used to authenticate the PR Environment API Server with Tailscale. You can get your Tailscale auth key from the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys). The installation script will prompt you for this key if it's not set in the `.env` file.
+>
+> The `TAILSCALE_API_KEY` is used to manage Tailscale machines via the API, specifically to remove machines when environments are deleted. You can create an API key in the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys) with the appropriate permissions. The `TAILSCALE_TAILNET` is your Tailscale organization name, which can be found in the URL when you're logged into the Tailscale admin console (e.g., `example.com` in `https://login.tailscale.com/admin/machines?org=example.com`).
 
 ## API Endpoints
 
@@ -323,6 +327,7 @@ The project follows a modular structure with clear separation of concerns:
 
 - `services/environmentService.js`: High-level environment management
 - `services/dockerComposeService.js`: Docker Compose specific operations
+- `services/tailscaleService.js`: Tailscale API integration for machine management
 
 ### Routes
 

@@ -1,6 +1,7 @@
 const { logger } = require('../utils/logger');
 const { run, get, all } = require('../database');
 const dockerComposeService = require('./dockerComposeService');
+const tailscaleService = require('./tailscaleService');
 const {
   createEnvironmentId,
   getEnvironmentDir,
@@ -216,6 +217,9 @@ async function removeEnvironment(repositoryName, prNumber) {
 
     // Stop and remove the environment
     await dockerComposeService.stopEnvironment(environmentDir);
+
+    // Remove the Tailscale machine
+    await tailscaleService.removeTailscaleMachine(environmentId);
 
     // Update environment status in database
     await run(

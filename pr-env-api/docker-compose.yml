@@ -5,13 +5,14 @@ services:
     hostname: pr-env-api
     environment:
       - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
-      - "TS_EXTRA_ARGS=--advertise-tags=tag:container --reset"
+      - TS_EXTRA_ARGS=--advertise-tags=tag:container
       - TS_SERVE_CONFIG=/config/pr-env-api.json
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
+      - TS_CERT_DOMAIN=pr-env-api.${TAILSCALE_DOMAIN:-tailf31c84.ts.net}
     volumes:
-      - ./config:/config
-      - pr-env-api-ts-state:/var/lib/tailscale
+      - ${PWD}/config:/config
+      - ${PWD}/state:/var/lib/tailscale
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
@@ -48,8 +49,6 @@ services:
       dockerfile: Dockerfile
     container_name: pr-env-api
     # restart: unless-stopped
-    ports:
-      - "3000:3000"
     volumes:
       - ./:/app
       - /app/node_modules
@@ -57,7 +56,7 @@ services:
       - ../vertuoza-compose:/vertuoza-compose
     environment:
       - PORT=3000
-      - NODE_ENV=production
+      - NODE_ENV=development
       - TAILSCALE_DOMAIN=${TAILSCALE_DOMAIN:-tailf31c84.ts.net}
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
@@ -77,6 +76,7 @@ services:
 networks:
   pr-env-network:
     name: "pr-env-network"
+    attachable: true
 
 volumes:
   pr-env-api-ts-state:
