@@ -70,6 +70,13 @@ async function updateEnvironmentFiles(environmentDir, repositoryName, prNumber, 
     // Replace all occurrences of tailscale-subdomain with the environment ID
     composeContent = composeContent.replace(/tailscale-subdomain/g, environmentId);
 
+    // Replace relative path to postgres-init with absolute path
+    const postgresInitDir = fileSystem.joinPath(environmentDir, 'postgres-init');
+    composeContent = composeContent.replace(
+      /- \.\/postgres-init:\/docker-entrypoint-initdb\.d/g,
+      `- ${postgresInitDir}:/docker-entrypoint-initdb.d`
+    );
+
     // Parse the updated content to YAML
     const compose = yaml.parse(composeContent);
 
