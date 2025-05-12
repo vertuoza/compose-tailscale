@@ -1,127 +1,128 @@
-const sqlite3 = require('sqlite3').verbose();
+const mysql = require('mysql2/promise');
 const { logger } = require('./utils/logger');
-const fileSystem = require('./utils/fileSystem');
-const fs = require('fs-extra');
 
-// Ensure the data directory exists
-const dataDir = fileSystem.joinPath(__dirname, '../data');
-fs.ensureDirSync(dataDir);
+// MySQL connection pool
+let pool = null;
 
-// Database file path
-const dbPath = process.env.DB_PATH || fileSystem.joinPath(dataDir, 'pr-environments.db');
+// Helper function to sleep
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Initialize database
-function setupDatabase() {
-  const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-      logger.error(`Error opening database: ${err.message}`);
-      process.exit(1);
+// Initialize database connection pool with retry mechanism
+async function setupDatabase(retries = 5, delay = 5000) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      // Create connection pool
+      pool = mysql.createPool({
+        host: process.env.MYSQL_HOST || 'mysql',
+        port: process.env.MYSQL_PORT || 3306,
+        user: process.env.MYSQL_USER || 'prenvuser',
+        password: process.env.MYSQL_PASSWORD || 'prenvpassword',
+        database: process.env.MYSQL_DATABASE || 'pr_environments',
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0
+      });
+
+      // Test the connection
+      await pool.query('SELECT 1');
+
+      logger.info(`Successfully connected to MySQL database on attempt ${attempt}`);
+
+      // Create tables if they don't exist
+      // Environments table
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS environments (
+          id VARCHAR(255) PRIMARY KEY,
+          repository_name VARCHAR(255) NOT NULL,
+          services_data TEXT NOT NULL,
+          pr_number INT NOT NULL,
+          status VARCHAR(50) NOT NULL,
+          url VARCHAR(255) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )
+      `);
+      logger.info('Environments table ready');
+
+      // Logs table for environment operations
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS environment_logs (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          environment_id VARCHAR(255) NOT NULL,
+          action VARCHAR(50) NOT NULL,
+          status VARCHAR(50) NOT NULL,
+          message TEXT,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (environment_id) REFERENCES environments (id)
+        )
+      `);
+      logger.info('Environment logs table ready');
+
+      return pool;
+    } catch (err) {
+      lastError = err;
+      logger.warn(`Database connection attempt ${attempt} failed: ${err.message}`);
+
+      if (attempt < retries) {
+        logger.info(`Retrying in ${delay / 1000} seconds...`);
+        await sleep(delay);
+      }
     }
-    logger.info('Connected to the PR environments database.');
-  });
+  }
 
-  // Create tables if they don't exist
-  db.serialize(() => {
-    // Environments table
-    db.run(`
-      CREATE TABLE IF NOT EXISTS environments (
-        id TEXT PRIMARY KEY,
-        repository_name TEXT NOT NULL,
-        services_data TEXT NOT NULL,
-        pr_number INTEGER NOT NULL,
-        status TEXT NOT NULL,
-        url TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `, (err) => {
-      if (err) {
-        logger.error(`Error creating environments table: ${err.message}`);
-      } else {
-        logger.info('Environments table ready');
-      }
-    });
-
-    // Logs table for environment operations
-    db.run(`
-      CREATE TABLE IF NOT EXISTS environment_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        environment_id TEXT NOT NULL,
-        action TEXT NOT NULL,
-        status TEXT NOT NULL,
-        message TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (environment_id) REFERENCES environments (id)
-      )
-    `, (err) => {
-      if (err) {
-        logger.error(`Error creating environment_logs table: ${err.message}`);
-      } else {
-        logger.info('Environment logs table ready');
-      }
-    });
-
-  });
-
-  return db;
+  // If we get here, all retries failed
+  logger.error(`Failed to connect to database after ${retries} attempts: ${lastError.message}`);
+  process.exit(1);
 }
 
-// Get database connection
+// Get database connection pool
 function getDb() {
-  return new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
-    if (err) {
-      logger.error(`Error opening database: ${err.message}`);
-      throw err;
-    }
-  });
+  if (!pool) {
+    logger.error('Database connection pool not initialized');
+    throw new Error('Database connection pool not initialized');
+  }
+  return pool;
 }
 
 // Helper to run a query with promises
-function run(query, params = []) {
-  return new Promise((resolve, reject) => {
-    const db = getDb();
-    db.run(query, params, function(err) {
-      db.close();
-      if (err) {
-        logger.error(`Error running query: ${query}, Error: ${err.message}`);
-        reject(err);
-      } else {
-        resolve({ id: this.lastID, changes: this.changes });
-      }
-    });
-  });
+async function run(query, params = []) {
+  try {
+    const database = getDb();
+    const [result] = await database.query(query, params);
+    return {
+      id: result.insertId,
+      changes: result.affectedRows
+    };
+  } catch (err) {
+    logger.error(`Error running query: ${query}, Error: ${err.message}`);
+    throw err;
+  }
 }
 
 // Helper to get a single row
-function get(query, params = []) {
-  return new Promise((resolve, reject) => {
-    const db = getDb();
-    db.get(query, params, (err, row) => {
-      db.close();
-      if (err) {
-        logger.error(`Error getting row: ${query}, Error: ${err.message}`);
-        reject(err);
-      } else {
-        resolve(row);
-      }
-    });
-  });
+async function get(query, params = []) {
+  try {
+    const database = getDb();
+    const [rows] = await database.query(query, params);
+    return rows[0];
+  } catch (err) {
+    logger.error(`Error getting row: ${query}, Error: ${err.message}`);
+    throw err;
+  }
 }
 
 // Helper to get all rows
-function all(query, params = []) {
-  return new Promise((resolve, reject) => {
-    const db = getDb();
-    db.all(query, params, (err, rows) => {
-      db.close();
-      if (err) {
-        logger.error(`Error getting all rows: ${query}, Error: ${err.message}`);
-        reject(err);
-      } else {
-        resolve(rows);
-      }
-    });
-  });
+async function all(query, params = []) {
+  try {
+    const database = getDb();
+    const [rows] = await database.query(query, params);
+    return rows;
+  } catch (err) {
+    logger.error(`Error getting all rows: ${query}, Error: ${err.message}`);
+    throw err;
+  }
 }
 
 module.exports = {

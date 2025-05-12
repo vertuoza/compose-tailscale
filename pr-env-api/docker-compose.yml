@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   tailscale:
     image: tailscale/tailscale:latest
@@ -18,38 +16,70 @@ services:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - net_admin
-    restart: unless-stopped
+    # restart: unless-stopped
     networks:
-      - vertuoza-network
+      - pr-env-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: pr-env-api-mysql
+    # restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-pr_environments}
+      - MYSQL_USER=${MYSQL_USER:-prenvuser}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-prenvpassword}
+    volumes:
+      - pr-env-mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - pr-env-network
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${MYSQL_ROOT_PASSWORD:-rootpassword}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   pr-env-api:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: pr-env-api
-    restart: unless-stopped
+    # restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
-      - ./data:/app/data
-      - ./logs:/app/logs
+      - ./:/app
+      - /app/node_modules
       - /var/run/docker.sock:/var/run/docker.sock
+      - ../vertuoza-compose:/vertuoza-compose
     environment:
       - PORT=3000
       - NODE_ENV=production
       - TAILSCALE_DOMAIN=${TAILSCALE_DOMAIN:-tailf31c84.ts.net}
-      - DB_PATH=/app/data/pr-environments.db
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-pr_environments}
+      - MYSQL_USER=${MYSQL_USER:-prenvuser}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-prenvpassword}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - VERTUOZA_COMPOSE_DIR=/vertuoza-compose
     networks:
-      - vertuoza-network
+      - pr-env-network
     depends_on:
-      - tailscale
+      tailscale:
+        condition: service_started
+      mysql:
+        condition: service_healthy
 
 networks:
-  vertuoza-network:
-    external: true
-    name: "vertuoza-network"
+  pr-env-network:
+    name: "pr-env-network"
 
 volumes:
   pr-env-api-ts-state:
+    driver: local
+  pr-env-mysql-data:
     driver: local

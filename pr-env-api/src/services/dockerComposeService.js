@@ -24,7 +24,7 @@ async function setupPrEnvironment(repositoryName, prNumber, services) {
     await fileSystem.ensureDirectory(environmentDir);
 
     // Path to the source vertuoza-compose folder
-    const sourceDir = fileSystem.joinPath(__dirname, '../../../vertuoza-compose');
+    const sourceDir = process.env.VERTUOZA_COMPOSE_DIR || fileSystem.joinPath(__dirname, '../../../vertuoza-compose');
 
     // Copy the entire vertuoza-compose folder contents directly to the environment directory
     await fileSystem.copyDirectory(sourceDir, environmentDir);

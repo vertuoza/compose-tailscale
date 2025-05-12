@@ -2,10 +2,10 @@ services:
   # Tailscale container for networking
   tailscale:
     image: tailscale/tailscale:latest
-    container_name: vertuoza-platform-ts
+    container_name: tailscale-subdomain-ts
     hostname: tailscale-subdomain
     environment:
-      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY:-tskey-auth-khztQLEN6i11CNTRL-eW4hLGY2n9Dbh9qvYp5d9DbSpVYiNoCGb}
+      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
       - "TS_EXTRA_ARGS=--advertise-tags=tag:container --reset"
       - TS_SERVE_CONFIG=/config/vertuoza-platform.json
       - TS_STATE_DIR=/var/lib/tailscale
@@ -260,6 +260,8 @@ services:
   #   depends_on:
   #     postgres:
   #       condition: service_healthy
+  #     postgres-db-init:
+  #       condition: service_completed_successfully
   #     pdf-builder-migrations:
   #       condition: service_completed_successfully
   #   networks:
@@ -273,6 +275,8 @@ services:
   #   depends_on:
   #     postgres:
   #       condition: service_healthy
+  #     postgres-db-init:
+  #       condition: service_completed_successfully
   #   networks:
   #     - tailscale-subdomain-network
 
@@ -376,6 +380,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-db-init:
+        condition: service_completed_successfully
       ai-migrations:
         condition: service_completed_successfully
     networks:
@@ -389,6 +395,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      postgres-db-init:
+        condition: service_completed_successfully
     networks:
       - tailscale-subdomain-network
 
@@ -575,17 +583,44 @@ services:
 
   postgres:
     image: postgres:${POSTGRES_VERSION:-15-alpine}
-    volumes:
-      - ./postgres-init:/docker-entrypoint-initdb.d
     environment:
       - POSTGRES_USER=vertuoza
       - POSTGRES_PASSWORD=vertuoza_password
-      - POSTGRES_MULTIPLE_DATABASES=pdf_builder,vertuo_ai
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U vertuoza -d pdf_builder -h localhost -p 5432']
+      test: ['CMD-SHELL', 'pg_isready -U vertuoza -h localhost -p 5432']
       interval: 10s
       retries: 5
       timeout: 5s
+    networks:
+      - tailscale-subdomain-network
+
+  postgres-db-init:
+    image: postgres:${POSTGRES_VERSION:-15-alpine}
+    restart: "no"
+    environment:
+      - PGPASSWORD=vertuoza_password
+    command:
+      - sh
+      - -c
+      - |
+        # Wait for postgres to be ready
+        until pg_isready -h postgres -U vertuoza; do
+          echo "Waiting for postgres to be ready..."
+          sleep 2
+        done
+
+        echo "Creating database 'vertuo_ai'..."
+        psql -v ON_ERROR_STOP=1 -h postgres -U vertuoza -c "CREATE DATABASE vertuo_ai;"
+        psql -v ON_ERROR_STOP=1 -h postgres -U vertuoza -c "GRANT ALL PRIVILEGES ON DATABASE vertuo_ai TO vertuoza;"
+
+        echo "Creating database 'pdf_builder'..."
+        psql -v ON_ERROR_STOP=1 -h postgres -U vertuoza -c "CREATE DATABASE pdf_builder;"
+        psql -v ON_ERROR_STOP=1 -h postgres -U vertuoza -c "GRANT ALL PRIVILEGES ON DATABASE pdf_builder TO vertuoza;"
+
+        echo "Databases created successfully!"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - tailscale-subdomain-network
 

@@ -15,9 +15,6 @@ const dataDir = fileSystem.joinPath(__dirname, '../data');
 fs.ensureDirSync(dataDir);
 fs.ensureDirSync(fileSystem.joinPath(dataDir, 'environments'));
 
-// Initialize the database
-setupDatabase();
-
 // Create Express app
 const app = express();
 
@@ -47,8 +44,24 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start the server
+// Initialize database and start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  logger.info(`PR Environment API Server running on port ${PORT}`);
-});
+
+// Wrap server startup in an async function to handle database initialization
+async function startServer() {
+  try {
+    // Initialize the database
+    await setupDatabase();
+
+    // Start the server
+    app.listen(PORT, () => {
+      logger.info(`PR Environment API Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    logger.error(`Failed to start server: ${err.message}`);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();

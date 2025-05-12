@@ -84,7 +84,7 @@ The Vertuoza Compose setup can be configured using environment variables in the 
 If you encounter issues with Tailscale, check the logs:
 
 ```bash
-docker logs vertuoza-platform-ts
+docker logs tailscale-subdomain
 ```
 
 ### Service Issues

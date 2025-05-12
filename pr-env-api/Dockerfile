@@ -1,7 +1,7 @@
-FROM node:22-alpine
+FROM node:20-alpine
 
 # Install Docker CLI and Docker Compose
-RUN apk add --no-cache docker docker-compose
+RUN apk add --no-cache docker docker-compose mysql-client
 
 # Create app directory
 WORKDIR /app
@@ -17,9 +17,6 @@ COPY . .
 
 # Create data and logs directories
 RUN mkdir -p data/environments logs
-
-# Expose port
-EXPOSE 3000
 
 # Start the app
 CMD ["node", "src/index.js"]

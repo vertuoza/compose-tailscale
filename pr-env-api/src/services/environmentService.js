@@ -63,11 +63,38 @@ async function createEnvironment(repositoryName, prNumber, services) {
   } catch (err) {
     logger.error(`Error creating environment: ${err.message}`);
 
-    // Log the error
-    await run(
-      'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
-      [createEnvironmentId(repositoryName, prNumber), 'create', 'error', err.message]
-    );
+    try {
+      // Check if environment exists before logging to database
+      const environmentId = createEnvironmentId(repositoryName, prNumber);
+      const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
+
+      if (existingEnv) {
+        // Environment exists, safe to log to database
+        await run(
+          'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+          [environmentId, 'create', 'error', err.message]
+        );
+      } else {
+        // Environment doesn't exist, create a placeholder record first
+        const servicesData = JSON.stringify(services || []);
+        const url = createEnvironmentUrl(environmentId);
+
+        // Create a placeholder environment record with error status
+        await run(
+          'INSERT INTO environments (id, repository_name, services_data, pr_number, status, url) VALUES (?, ?, ?, ?, ?, ?)',
+          [environmentId, repositoryName, servicesData, prNumber, 'error', url]
+        );
+
+        // Now safe to log to database
+        await run(
+          'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+          [environmentId, 'create', 'error', err.message]
+        );
+      }
+    } catch (logErr) {
+      // If logging to database fails, just log to console
+      logger.error(`Failed to log error to database: ${logErr.message}`);
+    }
 
     throw err;
   }
@@ -129,11 +156,38 @@ async function updateEnvironment(repositoryName, prNumber, services) {
   } catch (err) {
     logger.error(`Error updating environment: ${err.message}`);
 
-    // Log the error
-    await run(
-      'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
-      [createEnvironmentId(repositoryName, prNumber), 'update', 'error', err.message]
-    );
+    try {
+      // Check if environment exists before logging to database
+      const environmentId = createEnvironmentId(repositoryName, prNumber);
+      const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
+
+      if (existingEnv) {
+        // Environment exists, safe to log to database
+        await run(
+          'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+          [environmentId, 'update', 'error', err.message]
+        );
+      } else {
+        // Environment doesn't exist, create a placeholder record first
+        const servicesData = JSON.stringify(services || []);
+        const url = createEnvironmentUrl(environmentId);
+
+        // Create a placeholder environment record with error status
+        await run(
+          'INSERT INTO environments (id, repository_name, services_data, pr_number, status, url) VALUES (?, ?, ?, ?, ?, ?)',
+          [environmentId, repositoryName, servicesData, prNumber, 'error', url]
+        );
+
+        // Now safe to log to database
+        await run(
+          'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+          [environmentId, 'update', 'error', err.message]
+        );
+      }
+    } catch (logErr) {
+      // If logging to database fails, just log to console
+      logger.error(`Failed to log error to database: ${logErr.message}`);
+    }
 
     throw err;
   }
@@ -187,11 +241,25 @@ async function removeEnvironment(repositoryName, prNumber) {
   } catch (err) {
     logger.error(`Error removing environment: ${err.message}`);
 
-    // Log the error
-    await run(
-      'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
-      [createEnvironmentId(repositoryName, prNumber), 'remove', 'error', err.message]
-    );
+    try {
+      // Check if environment exists before logging to database
+      const environmentId = createEnvironmentId(repositoryName, prNumber);
+      const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
+
+      if (existingEnv) {
+        // Environment exists, safe to log to database
+        await run(
+          'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+          [environmentId, 'remove', 'error', err.message]
+        );
+      } else {
+        // If we're trying to remove a non-existent environment, just log to console
+        logger.warn(`Cannot log removal error for non-existent environment: ${environmentId}`);
+      }
+    } catch (logErr) {
+      // If logging to database fails, just log to console
+      logger.error(`Failed to log error to database: ${logErr.message}`);
+    }
 
     throw err;
   }

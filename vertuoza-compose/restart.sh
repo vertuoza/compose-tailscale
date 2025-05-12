@@ -30,7 +30,7 @@ fi
 # Stop any existing containers
 echo -e "${BLUE}Stopping any existing containers...${NC}"
 docker compose down --remove-orphans
-docker rm -f vertuoza-platform-ts 2>/dev/null || true
+docker rm -f tailscale-subdomain 2>/dev/null || true
 
 # Remove all volumes except Tailscale volume
 echo -e "${BLUE}Removing volumes except Tailscale...${NC}"
@@ -42,7 +42,7 @@ docker compose up -d
 
 # Check Tailscale status
 echo -e "${BLUE}Checking Tailscale status...${NC}"
-docker exec vertuoza-platform-ts tailscale status
+docker exec tailscale-subdomain tailscale status
 
 echo ""
 echo -e "${GREEN}=== Setup Complete ===${NC}"
@@ -61,4 +61,4 @@ echo -e "Planning: https://tailscale-subdomain.tailf31c84.ts.net/planning"
 echo ""
 echo -e "${YELLOW}Note: It may take a few moments for the Tailscale certificates to be generated.${NC}"
 echo -e "${YELLOW}If you encounter any issues, check the logs with:${NC}"
-echo -e "${BLUE}docker logs vertuoza-platform-ts${NC}"
+echo -e "${BLUE}docker logs tailscale-subdomain${NC}"
