@@ -2,14 +2,13 @@ services:
   tailscale:
     image: tailscale/tailscale:latest
     container_name: pr-env-api-ts
-    hostname: pr-env-api
+    hostname: pr-env-api-local
     environment:
       - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
       - TS_EXTRA_ARGS=--advertise-tags=tag:container
       - TS_SERVE_CONFIG=/config/pr-env-api.json
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
-      - TS_CERT_DOMAIN=pr-env-api.${TAILSCALE_DOMAIN:-tailf31c84.ts.net}
     volumes:
       - ${PWD}/config:/config
       - ${PWD}/state:/var/lib/tailscale
