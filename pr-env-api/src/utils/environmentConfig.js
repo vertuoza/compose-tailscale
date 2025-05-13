@@ -58,6 +58,18 @@ async function updateEnvironmentFiles(environmentDir, repositoryName, prNumber, 
       // Replace all occurrences of tailscale-subdomain with the environment ID
       envContent = envContent.replace(/tailscale-subdomain/g, environmentId);
 
+      // Add Google Cloud authentication if it exists in the parent environment
+      if (process.env.GOOGLE_CLOUD_KEYFILE) {
+        envContent += `\n# Google Cloud Authentication\nGOOGLE_CLOUD_KEYFILE=${process.env.GOOGLE_CLOUD_KEYFILE}\n`;
+        logger.info('Added Google Cloud Keyfile to environment');
+      }
+
+      // Add GitHub authentication if it exists in the parent environment
+      if (process.env.GITHUB_TOKEN) {
+        envContent += `\n# GitHub Authentication\nGITHUB_TOKEN=${process.env.GITHUB_TOKEN}\n`;
+        logger.info('Added GitHub Token to environment');
+      }
+
       // Write updated .env file
       await fileSystem.writeFile(envPath, envContent);
       logger.info(`Updated .env file at ${envPath} with subdomain ${environmentId}`);

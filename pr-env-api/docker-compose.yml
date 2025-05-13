@@ -64,6 +64,10 @@ services:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-prenvpassword}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - VERTUOZA_COMPOSE_DIR=/vertuoza-compose
+      # Google Cloud Authentication
+      - GOOGLE_CLOUD_KEYFILE=${GOOGLE_CLOUD_KEYFILE}
+      # GitHub Authentication
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     networks:
       - pr-env-network
     depends_on:
