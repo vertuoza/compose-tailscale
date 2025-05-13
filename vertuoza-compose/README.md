@@ -25,6 +25,7 @@ The Vertuoza Compose setup includes all the necessary services to run the Vertuo
 
 - Docker and Docker Compose
 - Tailscale
+- Repository must be cloned to the root level of your home directory (`~/compose-tailscale`) for the Docker volume mounts to work correctly
 
 ### Installation
 

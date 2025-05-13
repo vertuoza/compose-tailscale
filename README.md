@@ -47,11 +47,12 @@ Key components:
 
 ### Installation
 
-1. Clone this repository:
+1. Clone this repository to your home directory:
    ```bash
-   git clone https://github.com/yourusername/compose-tailscale.git
-   cd compose-tailscale
+   git clone https://github.com/yourusername/compose-tailscale.git ~/compose-tailscale
+   cd ~/compose-tailscale
    ```
+   **Important**: The repository must be cloned to the root level of your home directory (`~/compose-tailscale`) for the Docker volume mounts to work correctly.
 
 2. Set up the PR Environment API Server:
    ```bash

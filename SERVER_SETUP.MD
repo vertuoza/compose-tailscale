@@ -21,6 +21,7 @@ Tailscale
 ```
 curl -fsSL https://tailscale.com/install.sh | sh
 tailscale up
+tailscale cert environment.tailf31c84.ts.net
 ```
 
 Docker
