@@ -84,5 +84,5 @@ networks:
 volumes:
   ephemeral-environments-api-ts-state:
     driver: local
-  ephemeral-environment-mysql-data:
+  ephemeral-environments-mysql-data:
     driver: local
