@@ -50,7 +50,7 @@ app.use((err, req, res, next) => {
 });
 
 // Initialize database and start server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 // Wrap server startup in an async function to handle database initialization
 async function startServer() {

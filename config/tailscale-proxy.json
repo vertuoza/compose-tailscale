@@ -8,10 +8,10 @@
     "${TS_CERT_DOMAIN}:443": {
       "Handlers": {
         "/api/": {
-          "Proxy": "http://ephemeral-environments-api:3000"
+          "Proxy": "http://ephemeral-environments-api:4000"
         },
         "/": {
-          "Proxy": "http://ephemeral-environments-frontend:80"
+          "Proxy": "http://ephemeral-environments-frontend:3000"
         }
       }
     }

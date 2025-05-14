@@ -27,7 +27,7 @@ COPY . .
 RUN mkdir -p data/environments logs
 
 # Expose port
-EXPOSE 3000
+EXPOSE 4000
 
 # Start the app
 CMD ["node", "src/index.js"]
