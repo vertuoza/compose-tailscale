@@ -20,7 +20,7 @@ jobs:
         with:
           oauth-client-id: ${{ secrets.TAILSCALE_CLIENT_ID }}
           oauth-secret: ${{ secrets.TAILSCALE_CLIENT_SECRET }}
-          tags: tag:actions
+          tags: tag:github-actions
 
       - name: Wait for Tailscale to connect
         run: sleep 10  # Give Tailscale a moment to establish connection
