@@ -38,6 +38,7 @@ jobs:
             --exclude='ephemeral-environments-api/data/' \
             --exclude='ephemeral-environments-api/logs/' \
             --exclude='ephemeral-environments-api/state/' \
+            --exclude='*.env' \
             ./ root@$REMOTE_HOST:~/compose-tailscale/
 
           echo "Repository transferred successfully"
