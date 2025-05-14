@@ -9,7 +9,7 @@ This workflow automatically deploys the repository to a remote server when chang
 ### Workflow Steps
 
 1. Checks out the code
-2. Sets up a Tailscale connection with the "tag:actions" tag
+2. Sets up a Tailscale connection with the "tag:github-actions" tag
 3. Transfers the repository to the remote server using rsync
 4. Rebuilds the API on the remote server
 
@@ -47,4 +47,4 @@ The following directories are excluded from the rsync transfer to preserve exist
 
 1. Ensure your remote server is connected to Tailscale
 2. Make sure the GitHub Actions runner can connect to your remote server via Tailscale
-3. The remote server should accept connections from nodes with the "tag:actions" tag
+3. The remote server should accept connections from nodes with the "tag:github-actions" tag
