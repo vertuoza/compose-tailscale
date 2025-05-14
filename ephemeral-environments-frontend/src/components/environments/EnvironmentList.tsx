@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, ReactNode } from 'react';
 import { Environment } from '../../services/api';
 import EnvironmentCard from './EnvironmentCard';
 import EnvironmentLogs from './EnvironmentLogs';
@@ -7,7 +7,7 @@ interface EnvironmentListProps {
   environments: Environment[];
   onDelete: (id: string) => void;
   title?: string;
-  emptyMessage?: string;
+  emptyMessage?: ReactNode;
 }
 
 const EnvironmentList: React.FC<EnvironmentListProps> = ({
@@ -33,7 +33,7 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
       )}
 
       {environments.length === 0 ? (
-        <div className="bg-linear-dark-lighter rounded-lg border border-linear-border p-8 text-center text-linear-text-secondary">
+        <div className="bg-linear-dark-lighter rounded-lg border border-linear-border overflow-hidden">
           {emptyMessage}
         </div>
       ) : (

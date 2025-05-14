@@ -8,6 +8,7 @@ interface ButtonProps {
   disabled?: boolean;
   className?: string;
   type?: 'button' | 'submit' | 'reset';
+  icon?: React.ReactNode;
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -18,6 +19,7 @@ const Button: React.FC<ButtonProps> = ({
   disabled = false,
   className = '',
   type = 'button',
+  icon,
 }) => {
   const baseClasses = 'btn';
   const variantClasses = {
@@ -27,12 +29,14 @@ const Button: React.FC<ButtonProps> = ({
   };
 
   const sizeClasses = {
-    sm: 'px-2 py-1 text-sm',
-    md: 'px-4 py-2',
-    lg: 'px-6 py-3 text-lg',
+    sm: 'text-xs',
+    md: 'text-sm',
+    lg: 'text-base',
   };
 
-  const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
+  const disabledClasses = disabled ? 'opacity-50 cursor-not-allowed' : '';
+
+  const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${disabledClasses} ${className}`;
 
   return (
     <button
@@ -41,6 +45,7 @@ const Button: React.FC<ButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
     >
+      {icon && <span className="mr-1.5">{icon}</span>}
       {children}
     </button>
   );
