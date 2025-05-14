@@ -1,8 +1,8 @@
 services:
   tailscale:
     image: tailscale/tailscale:latest
-    container_name: ephemeral-environments-api-ts
-    hostname: ephemeral-environments-api-temp
+    container_name: ephemeral-environments-ts
+    hostname: ephemeral-environments-temp
     environment:
       - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
       - TS_EXTRA_ARGS=--advertise-tags=tag:container
@@ -22,7 +22,7 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: ephemeral-environments-api-mysql
+    container_name: ephemeral-environments-mysql
     restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
@@ -44,15 +44,17 @@ services:
 
   ephemeral-environments-api:
     build:
-      context: .
+      context: ./ephemeral-environments-api
       dockerfile: Dockerfile
     container_name: ephemeral-environments-api
     restart: unless-stopped
     volumes:
-      - ./:/app
+      - ./ephemeral-environments-api:/app
+      - ./data:/app/data
+      - ./logs:/app/logs
       - /app/node_modules
       - /var/run/docker.sock:/var/run/docker.sock
-      - ../vertuoza-compose:/vertuoza-compose
+      - ./vertuoza-compose:/vertuoza-compose
     environment:
       - PORT=3000
       - NODE_ENV=development
@@ -76,13 +78,22 @@ services:
       mysql:
         condition: service_healthy
 
+  ephemeral-environments-frontend:
+    build:
+      context: ./ephemeral-environments-frontend
+      dockerfile: Dockerfile
+    container_name: ephemeral-environments-frontend
+    restart: unless-stopped
+    networks:
+      - ephemeral-environments-network
+
 networks:
   ephemeral-environments-network:
     name: "ephemeral-environments-network"
     attachable: true
 
 volumes:
-  ephemeral-environments-api-ts-state:
+  ephemeral-environments-ts-state:
     driver: local
   ephemeral-environments-mysql-data:
     driver: local

@@ -1,9 +1,10 @@
 # Vertuoza Ephemeral Environments System
 
-This repository contains two main components for managing ephemeral environments for Vertuoza services:
+This repository contains three main components for managing ephemeral environments for Vertuoza services:
 
 1. **Ephemeral Environment API Server** (`ephemeral-environments-api/`): A Node.js API server for creating, updating, and removing ephemeral environments
-2. **Vertuoza Compose** (`vertuoza-compose/`): A Docker Compose setup for running the Vertuoza platform services
+2. **Ephemeral Environment Frontend** (`ephemeral-environments-frontend/`): A web interface for managing and monitoring ephemeral environments
+3. **Vertuoza Compose** (`vertuoza-compose/`): A Docker Compose setup for running the Vertuoza platform services
 
 ## Overview
 
@@ -23,6 +24,17 @@ Key features:
 - Tailscale integration for secure networking
 
 [Learn more about the Ephemeral Environments API Server](./ephemeral-environments-api/README.md)
+
+### Ephemeral Environments Frontend
+
+The Ephemeral Environments Frontend provides a web interface for managing and monitoring ephemeral environments. It communicates with the API server to display environment status, logs, and allows for manual operations.
+
+Key features:
+- Dashboard view of all environments
+- Environment status monitoring
+- View environment logs
+- Manual environment management (delete)
+- Responsive design
 
 ### GitHub Workflows
 
@@ -63,10 +75,16 @@ Key components:
    ```
    **Important**: The repository must be cloned to the root level of your home directory (`~/compose-tailscale`) for the Docker volume mounts to work correctly.
 
-2. Set up the Ephemeral Environments API Server:
+2. Create a `.env` file based on the provided example:
    ```bash
-   cd ephemeral-environments-api
-   ./install.sh
+   cp .env.example .env
+   ```
+
+3. Edit the `.env` file to set your Tailscale credentials and other configuration options.
+
+4. Start the services using Docker Compose:
+   ```bash
+   docker-compose up -d
    ```
 
 3. Configure GitHub Actions in your repositories:
@@ -98,6 +116,15 @@ The system works as follows:
 3. The Ephemeral Environments API Server creates a copy of the Vertuoza Compose setup for the PR, configures it with the PR-specific settings, and starts the environment.
 4. The Ephemeral Environments API Server returns the URL of the ephemeral environment, which is posted as a comment on the PR.
 5. When the PR is closed, the GitHub Actions workflow calls the Ephemeral Environments API Server to remove the ephemeral environment.
+6. The Ephemeral Environments Frontend provides a web interface for monitoring and managing these environments.
+
+### Routing Configuration
+
+The system uses Tailscale for networking and routing:
+
+- The frontend is accessible at the root path (`/`) through `ephemeral-environments-temp.tailf31c84.ts.net`
+- The API is accessible through the `/api` path (e.g., `/api/environments`)
+- Tailscale handles the routing between these components securely
 
 ## Security
 

@@ -31,7 +31,7 @@ app.use(morgan('combined', { stream: { write: message => logger.info(message.tri
 const environmentRoutes = require('./routes/environments');
 
 // Apply routes
-app.use('/api/environments', environmentRoutes);
+app.use('/environments', environmentRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
