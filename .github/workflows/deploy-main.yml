@@ -30,7 +30,7 @@ jobs:
           REMOTE_HOST: ${{ vars.REMOTE_HOST }}
         run: |
           # Create the destination directory if it doesn't exist
-          ssh root@$REMOTE_HOST "mkdir -p ~/compose-tailscale"
+          ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "mkdir -p ~/compose-tailscale"
 
           # Use rsync to transfer files, excluding .git and preserving specific directories
           rsync -avz --delete \
@@ -47,6 +47,6 @@ jobs:
           REMOTE_HOST: ${{ vars.REMOTE_HOST }}
         run: |
           # Navigate to the API directory and rebuild
-          ssh root@$REMOTE_HOST "cd ~/compose-tailscale/pr-env-api && docker compose down && docker compose build && docker compose up -d"
+          ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "cd ~/compose-tailscale/pr-env-api && docker compose down && docker compose build && docker compose up -d"
 
           echo "API rebuilt successfully"
