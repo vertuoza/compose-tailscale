@@ -1,4 +1,5 @@
 const axios = require('axios');
+const https = require('https');
 const { logger } = require('../utils/logger');
 
 // Tailscale API base URL
@@ -93,7 +94,41 @@ async function removeTailscaleMachine(environmentId) {
   }
 }
 
+/**
+ * Trigger certificate generation for a Tailscale environment
+ * @param {string} environmentUrl - The URL of the environment
+ * @returns {Promise<boolean>} - Success status
+ */
+async function triggerCertificateGeneration(environmentUrl) {
+  try {
+    logger.info(`Triggering certificate generation for ${environmentUrl}`);
+
+    // Create an HTTPS agent that ignores SSL certificate errors
+    // This is necessary because we're trying to access a URL that might not have valid certs yet
+    const agent = new https.Agent({
+      rejectUnauthorized: false
+    });
+
+    // Make a request to the environment URL with a timeout
+    // We don't care about the response, just that the request is made
+    await axios.get(environmentUrl, {
+      httpsAgent: agent,
+      timeout: 20000, // 10 second timeout
+      validateStatus: () => true // Accept any status code
+    });
+
+    logger.info(`Successfully triggered certificate generation for ${environmentUrl}`);
+    return true;
+  } catch (err) {
+    logger.warn(`Error triggering certificate generation for ${environmentUrl}: ${err.message}`);
+    // Don't throw the error, just return false to indicate failure
+    // This way, if certificate generation fails, it won't block the rest of the environment creation
+    return false;
+  }
+}
+
 module.exports = {
   getOAuthToken,
-  removeTailscaleMachine
+  removeTailscaleMachine,
+  triggerCertificateGeneration
 };

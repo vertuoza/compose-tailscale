@@ -58,7 +58,7 @@ runs:
       shell: bash
       run: |
         # Create or update the environment
-        curl -X POST ${{ inputs.api_url }}/api/environments \
+        curl --max-time 600 -X POST ${{ inputs.api_url }}/api/environments \
           -H "Content-Type: application/json" \
           -d '{
             "repository_name": "${{ inputs.repository_name }}",

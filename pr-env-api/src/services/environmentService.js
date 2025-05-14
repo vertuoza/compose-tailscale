@@ -2,6 +2,7 @@ const { logger } = require('../utils/logger');
 const { run, get, all } = require('../database');
 const dockerComposeService = require('./dockerComposeService');
 const tailscaleService = require('./tailscaleService');
+const { setTimeout } = require('timers/promises');
 const {
   createEnvironmentId,
   getEnvironmentDir,
@@ -35,6 +36,12 @@ async function createEnvironment(repositoryName, prNumber, services) {
 
     // Create the URL for the PR environment
     const url = createEnvironmentUrl(environmentId);
+
+    // Trigger certificate generation with a delay to ensure Tailscale is ready
+    // This is done asynchronously so we don't block the environment creation
+    setTimeout(5000) // 5 second delay
+      .then(() => tailscaleService.triggerCertificateGeneration(url))
+      .catch(err => logger.error(`Error in delayed certificate generation: ${err.message}`));
 
     // Store environment in database
     const servicesData = JSON.stringify(services);
@@ -128,6 +135,12 @@ async function updateEnvironment(repositoryName, prNumber, services) {
 
     // Create the URL for the PR environment
     const url = createEnvironmentUrl(environmentId);
+
+    // Trigger certificate generation with a delay to ensure Tailscale is ready
+    // This is done asynchronously so we don't block the environment update
+    setTimeout(5000) // 5 second delay
+      .then(() => tailscaleService.triggerCertificateGeneration(url))
+      .catch(err => logger.error(`Error in delayed certificate generation: ${err.message}`));
 
     const servicesData = JSON.stringify(services);
 

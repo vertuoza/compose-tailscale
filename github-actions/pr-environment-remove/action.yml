@@ -45,7 +45,7 @@ runs:
     - name: Remove PR environment
       shell: bash
       run: |
-        curl -X DELETE "${{ inputs.api_url }}/api/environments/${{ steps.set-id.outputs.id }}"
+        curl --max-time 600 -X DELETE "${{ inputs.api_url }}/api/environments/${{ steps.set-id.outputs.id }}"
 
     - name: Comment on PR about removal
       uses: actions/github-script@v6
