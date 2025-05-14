@@ -105,7 +105,7 @@ The system works as follows:
 - Tailscale auth keys are stored in environment variables and not committed to the repository.
 - GitHub Actions uses Tailscale OAuth to connect to the PR Environment API Server.
 - The Deploy to Remote Server workflow uses Tailscale for secure SSH connections to the remote server.
-- The remote server should be configured to accept connections from Tailscale nodes with the "tag:actions" tag.
+- The remote server should be configured to accept connections from Tailscale nodes with the "tag:github-actions" tag.
 
 ## Documentation
 
