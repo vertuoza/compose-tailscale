@@ -33,7 +33,7 @@ jobs:
           ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "mkdir -p ~/compose-tailscale"
 
           # Use rsync to transfer files, excluding .git and preserving specific directories
-          rsync -avz --delete \
+          rsync -az --delete --no-times --size-only \
             --exclude='.git/' \
             --exclude='pr-env-api/data/' \
             --exclude='pr-env-api/logs/' \

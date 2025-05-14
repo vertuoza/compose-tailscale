@@ -1,3 +1,8 @@
+Setup
+```
+apt-get update && apt-get install -y rsync
+```
+
 Docker
 ```
 # Add Docker's official GPG key:
