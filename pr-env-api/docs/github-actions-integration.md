@@ -34,11 +34,11 @@ Add these credentials to your github-actions repository secrets:
 1. Go to your github-actions repository
 2. Navigate to "Settings" > "Secrets and variables" > "Actions"
 3. Click "New repository secret"
-4. Name: `TS_OAUTH_CLIENT_ID`
+4. Name: `TAILSCALE_CLIENT_ID`
 5. Value: Your Tailscale OAuth Client ID
 6. Click "Add secret"
 7. Click "New repository secret" again
-8. Name: `TS_OAUTH_SECRET`
+8. Name: `TAILSCALE_CLIENT_SECRET`
 9. Value: Your Tailscale OAuth Client Secret
 10. Click "Add secret"
 

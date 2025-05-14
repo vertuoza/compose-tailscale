@@ -38,7 +38,7 @@ This API server provides endpoints for creating, updating, and deleting PR envir
 
 3. Start the API server:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
 
 ### Manual Installation

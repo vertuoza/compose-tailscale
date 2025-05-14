@@ -17,7 +17,7 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # Check if Docker Compose is installed
-if ! command -v docker-compose &> /dev/null; then
+if ! command -v docker compose &> /dev/null; then
     echo -e "${RED}Docker Compose is not installed. Please install Docker Compose first.${NC}"
     exit 1
 fi
@@ -77,7 +77,7 @@ mkdir -p data/environments logs
 
 # Build and start the API server
 echo -e "${BLUE}Building and starting the API server...${NC}"
-docker-compose up -d --build
+docker compose up -d --build
 
 # Check if the API server is running
 if [ $? -eq 0 ]; then

@@ -40,7 +40,7 @@ This script will:
 Check that the API server is running:
 
 ```bash
-docker-compose ps
+docker compose ps
 ```
 
 You should see the `pr-env-api` container running.
@@ -90,7 +90,7 @@ Create a pull request in your repository to test the setup. The GitHub Actions w
 Check the logs:
 
 ```bash
-docker-compose logs pr-env-api
+docker compose logs pr-env-api
 ```
 
 ### Tailscale Configuration Issues
@@ -113,8 +113,8 @@ To update the API server:
 
 ```bash
 git pull
-docker-compose down
-docker-compose up -d --build
+docker compose down
+docker compose up -d --build
 ```
 
 ### Backing Up the Database
@@ -130,7 +130,7 @@ cp data/pr-environments.db /path/to/backup/
 You can monitor the API server logs:
 
 ```bash
-docker-compose logs -f pr-env-api
+docker compose logs -f pr-env-api
 ```
 
 ## Project Structure
