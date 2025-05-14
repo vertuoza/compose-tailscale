@@ -1,5 +1,5 @@
-name: 'PR Environment Remove'
-description: 'Remove PR environments using the PR Environment API'
+name: 'Ephemeral Environment Remove'
+description: 'Remove ephemeral environments using the Ephemeral Environments API'
 author: 'Vertuoza'
 
 inputs:
@@ -13,11 +13,11 @@ inputs:
     description: 'GitHub token for commenting on PRs'
     required: true
   api_url:
-    description: 'URL of the PR Environment API'
+    description: 'URL of the Ephemeral Environments API'
     required: false
-    default: 'https://pr-env-api.tailf31c84.ts.net'
+    default: 'https://ephemeral-environments-api.tailf31c84.ts.net'
   tailscale_domain:
-    description: 'Tailscale domain for the PR environment'
+    description: 'Tailscale domain for the ephemeral environment'
     required: false
     default: 'tailf31c84.ts.net'
 
@@ -56,5 +56,5 @@ runs:
             issue_number: ${{ inputs.pr_number }},
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: `🧹 PR environment has been removed.`
+            body: `🧹 Ephemeral environment has been removed.`
           });

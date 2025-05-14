@@ -1,7 +1,7 @@
 {
-  "name": "pr-env-api",
+  "name": "ephemeral-environments-api",
   "version": "1.0.0",
-  "description": "API server for managing PR environments with Docker Compose and Tailscale",
+  "description": "API server for managing ephemeral environments with Docker Compose and Tailscale",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

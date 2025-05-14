@@ -1,16 +1,16 @@
-# PR Environment API Server
+# Ephemeral Environment API Server
 
-A Node.js API server for managing PR environments with Docker Compose and Tailscale.
+A Node.js API server for managing ephemeral environments with Docker Compose and Tailscale.
 
 ## Overview
 
-This API server provides endpoints for creating, updating, and deleting PR environments using Docker Compose. It integrates with Tailscale to provide secure access to the environments.
+This API server provides endpoints for creating, updating, and deleting ephemeral environments using Docker Compose. It integrates with Tailscale to provide secure access to the environments.
 
 ## Features
 
-- Create PR environments with Docker Compose
-- Update existing PR environments
-- Remove PR environments with automatic Tailscale machine cleanup
+- Create ephemeral environments with Docker Compose
+- Update existing ephemeral environments
+- Remove ephemeral environments with automatic Tailscale machine cleanup
 - Track environment status and logs
 - Tailscale integration for secure networking
 
@@ -26,8 +26,8 @@ This API server provides endpoints for creating, updating, and deleting PR envir
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/pr-env-api.git
-   cd pr-env-api
+   git clone https://github.com/yourusername/ephemeral-environments-api.git
+   cd ephemeral-environments-api
    ```
 
 2. Configure environment variables:
@@ -45,8 +45,8 @@ This API server provides endpoints for creating, updating, and deleting PR envir
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/pr-env-api.git
-   cd pr-env-api
+   git clone https://github.com/yourusername/ephemeral-environments-api.git
+   cd ephemeral-environments-api
    ```
 
 2. Install dependencies:
@@ -77,10 +77,10 @@ The API server can be configured using environment variables:
 | `TAILSCALE_AUTH_KEY` | Tailscale auth key | None (required) |
 | `TAILSCALE_API_KEY` | Tailscale API key for machine management | None (required for machine cleanup) |
 | `TAILSCALE_TAILNET` | Your Tailscale tailnet name | None (required for machine cleanup) |
-| `DB_PATH` | Path to SQLite database | `/app/data/pr-environments.db` |
+| `DB_PATH` | Path to SQLite database | `/app/data/ephemeral-environments.db` |
 | `LOG_LEVEL` | Logging level | `info` |
 
-> **Security Note**: The `TAILSCALE_AUTH_KEY` is used to authenticate the PR Environment API Server with Tailscale. You can get your Tailscale auth key from the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys). The installation script will prompt you for this key if it's not set in the `.env` file.
+> **Security Note**: The `TAILSCALE_AUTH_KEY` is used to authenticate the Ephemeral Environments API Server with Tailscale. You can get your Tailscale auth key from the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys). The installation script will prompt you for this key if it's not set in the `.env` file.
 >
 > The `TAILSCALE_API_KEY` is used to manage Tailscale machines via the API, specifically to remove machines when environments are deleted. You can create an API key in the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys) with the appropriate permissions. The `TAILSCALE_TAILNET` is your Tailscale organization name, which can be found in the URL when you're logged into the Tailscale admin console (e.g., `example.com` in `https://login.tailscale.com/admin/machines?org=example.com`).
 
@@ -232,7 +232,7 @@ Response:
 This API server can be integrated with GitHub Actions using a custom GitHub Action that handles PR environment management. Here's an example of how to use it:
 
 ```yaml
-name: PR Environment
+name: Ephemeral Environment
 
 on:
   pull_request:
@@ -266,14 +266,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # Manage PR environment
+  # Manage ephemeral environment
   manage-environment:
     needs: [build-main-service]
     if: always()
     runs-on: ubuntu-latest
     steps:
       # For PR opened/updated events
-      - name: Create/Update PR Environment
+      - name: Create/Update Ephemeral Environment
         if: github.event.action != 'closed'
         uses: vertuoza/github-actions/pr-environment-create@main
         with:
@@ -289,7 +289,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
       # For PR closed events
-      - name: Remove PR Environment
+      - name: Remove Ephemeral Environment
         if: github.event.action == 'closed'
         uses: vertuoza/github-actions/pr-environment-remove@main
         with:
@@ -298,9 +298,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 ```
 
-The custom GitHub Action encapsulates the PR environment management logic, including:
+The custom GitHub Action encapsulates the ephemeral environment management logic, including:
 - Connecting to Tailscale
-- Creating, updating, or removing PR environments
+- Creating, updating, or removing ephemeral environments
 - Commenting on PRs with environment URLs
 
 This approach offers several benefits:
@@ -339,7 +339,7 @@ The following documentation is available:
 
 - [API Reference](./docs/api-reference.md): Detailed information about the API endpoints
 - [GitHub Actions Integration Guide](./docs/github-actions-integration.md): How to integrate with GitHub Actions
-- [Setup Guide](./docs/setup-guide.md): How to set up the PR Environment API Server
+- [Setup Guide](./docs/setup-guide.md): How to set up the Ephemeral Environments API Server
 
 ## License
 

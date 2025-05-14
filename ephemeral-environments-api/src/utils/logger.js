@@ -17,7 +17,7 @@ const logger = winston.createLogger({
     winston.format.splat(),
     winston.format.json()
   ),
-  defaultMeta: { service: 'pr-env-api' },
+  defaultMeta: { service: 'ephemeral-environments-api' },
   transports: [
     // Write to all logs with level 'info' and below to combined.log
     new winston.transports.File({

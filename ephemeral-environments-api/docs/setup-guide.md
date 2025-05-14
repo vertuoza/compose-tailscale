@@ -1,6 +1,6 @@
-# PR Environment API Server Setup Guide
+# Ephemeral Environment API Server Setup Guide
 
-This guide explains how to set up the PR Environment API Server on your Ubuntu VM.
+This guide explains how to set up the Ephemeral Environment API Server on your Ubuntu VM.
 
 ## Prerequisites
 
@@ -13,11 +13,11 @@ This guide explains how to set up the PR Environment API Server on your Ubuntu V
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/pr-env-api.git
-cd pr-env-api
+git clone https://github.com/yourusername/ephemeral-environments-api.git
+cd ephemeral-environments-api
 ```
 
-### 2. Install the PR Environment API Server
+### 2. Install the Ephemeral Environment API Server
 
 Run the installation script:
 
@@ -31,9 +31,9 @@ This script will:
 - Prompt you to enter your Tailscale auth key and domain
 - Create data and logs directories
 - Build and start the Docker containers
-- Make the API server accessible at `http://localhost:3000` and via Tailscale at `https://pr-env-api.tailf31c84.ts.net`
+- Make the API server accessible at `http://localhost:3000` and via Tailscale at `https://ephemeral-environments-api.tailf31c84.ts.net`
 
-> **Security Note**: The installation script will prompt you for your Tailscale auth key, which is used to authenticate the PR Environment API Server with Tailscale. You can get your Tailscale auth key from the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys).
+> **Security Note**: The installation script will prompt you for your Tailscale auth key, which is used to authenticate the Ephemeral Environment API Server with Tailscale. You can get your Tailscale auth key from the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys).
 
 ### 4. Verify the Installation
 
@@ -43,7 +43,7 @@ Check that the API server is running:
 docker compose ps
 ```
 
-You should see the `pr-env-api` container running.
+You should see the `ephemeral-environments-api` container running.
 
 Test the API server:
 
@@ -64,7 +64,7 @@ You should get a response like:
 Copy the example workflow file to your repository:
 
 ```bash
-cp examples/github-workflow.yml /path/to/your/repo/.github/workflows/pr-environment.yml
+cp examples/github-workflow.yml /path/to/your/repo/.github/workflows/ephemeral-environment.yml
 ```
 
 ### 2. Customize the Workflow
@@ -80,7 +80,7 @@ Customize the workflow file as needed for your repository:
 Create a pull request in your repository to test the setup. The GitHub Actions workflow should:
 
 1. Build a Docker image for your PR
-2. Call the PR Environment API Server to create a PR environment
+2. Call the Ephemeral Environments API Server to create an ephemeral environment
 3. Comment on the PR with the environment URL
 
 ## Troubleshooting
@@ -90,7 +90,7 @@ Create a pull request in your repository to test the setup. The GitHub Actions w
 Check the logs:
 
 ```bash
-docker compose logs pr-env-api
+docker compose logs ephemeral-environments-api
 ```
 
 ### Tailscale Configuration Issues
@@ -122,7 +122,7 @@ docker compose up -d --build
 The database is stored in the `data` directory. To back it up:
 
 ```bash
-cp data/pr-environments.db /path/to/backup/
+cp data/ephemeral-environments.db /path/to/backup/
 ```
 
 ### Monitoring
@@ -130,12 +130,12 @@ cp data/pr-environments.db /path/to/backup/
 You can monitor the API server logs:
 
 ```bash
-docker compose logs -f pr-env-api
+docker compose logs -f ephemeral-environments-api
 ```
 
 ## Project Structure
 
-The PR Environment API Server follows a modular structure with clear separation of concerns:
+The Ephemeral Environments API Server follows a modular structure with clear separation of concerns:
 
 ### Utils
 

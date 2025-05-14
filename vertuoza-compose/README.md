@@ -109,4 +109,4 @@ docker logs postgres
 
 The Vertuoza Compose setup is used by the PR Environment API Server to create isolated environments for each PR. The PR Environment API Server creates a copy of this directory for each PR, configures it with PR-specific settings, and starts the environment.
 
-For more information, see the [PR Environment API Server documentation](../pr-env-api/README.md).
+For more information, see the [PR Environments API Server documentation](../ephemeral-environments-api/README.md).

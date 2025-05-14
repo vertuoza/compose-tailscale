@@ -29,9 +29,9 @@ This workflow automatically deploys the repository to a remote server when chang
 The following directories are excluded from the rsync transfer to preserve existing data:
 
 - `.git/`
-- `pr-env-api/data/`
-- `pr-env-api/logs/`
-- `pr-env-api/state/`
+- `ephemeral-environments-api/data/`
+- `ephemeral-environments-api/logs/`
+- `ephemeral-environments-api/state/`
 
 ### Setup Instructions
 

@@ -35,9 +35,9 @@ jobs:
           # Use rsync to transfer files, excluding .git and preserving specific directories
           rsync -az --delete --no-times --size-only \
             --exclude='.git/' \
-            --exclude='pr-env-api/data/' \
-            --exclude='pr-env-api/logs/' \
-            --exclude='pr-env-api/state/' \
+            --exclude='ephemeral-environments-api/data/' \
+            --exclude='ephemeral-environments-api/logs/' \
+            --exclude='ephemeral-environments-api/state/' \
             ./ root@$REMOTE_HOST:~/compose-tailscale/
 
           echo "Repository transferred successfully"
@@ -47,6 +47,6 @@ jobs:
           REMOTE_HOST: ${{ vars.REMOTE_HOST }}
         run: |
           # Navigate to the API directory and rebuild
-          ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "cd ~/compose-tailscale/pr-env-api && docker compose down && docker compose build && docker compose up -d"
+          ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "cd ~/compose-tailscale/ephemeral-environments-api && docker compose down && docker compose build && docker compose up -d"
 
           echo "API rebuilt successfully"

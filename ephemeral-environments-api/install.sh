@@ -7,7 +7,7 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}=== PR Environment API Server Installation ===${NC}"
+echo -e "${GREEN}=== Ephemeral Environments API Server Installation ===${NC}"
 echo ""
 
 # Check if Docker is installed
@@ -81,9 +81,9 @@ docker compose up -d --build
 
 # Check if the API server is running
 if [ $? -eq 0 ]; then
-    echo -e "${GREEN}PR Environment API Server is now running!${NC}"
+    echo -e "${GREEN}Ephemeral Environments API Server is now running!${NC}"
     echo -e "${BLUE}You can access it at:${NC} http://localhost:3000"
-    echo -e "${BLUE}Or via Tailscale at:${NC} https://pr-env-api.tailf31c84.ts.net"
+    echo -e "${BLUE}Or via Tailscale at:${NC} https://ephemeral-environments-api.tailf31c84.ts.net"
 
 
     echo ""
@@ -92,6 +92,6 @@ if [ $? -eq 0 ]; then
     echo -e "1. Add the GitHub Actions workflow to your repositories"
     echo -e "2. Test the setup by creating a PR"
 else
-    echo -e "${RED}Failed to start the PR Environment API Server.${NC}"
+    echo -e "${RED}Failed to start the Ephemeral Environments API Server.${NC}"
     echo -e "${YELLOW}Check the logs for more information:${NC} docker-compose logs"
 fi

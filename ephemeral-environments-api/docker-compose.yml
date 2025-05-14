@@ -1,12 +1,12 @@
 services:
   tailscale:
     image: tailscale/tailscale:latest
-    container_name: pr-env-api-ts
-    hostname: pr-env-api-local
+    container_name: ephemeral-environments-api-ts
+    hostname: ephemeral-environments-api-temp
     environment:
       - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
       - TS_EXTRA_ARGS=--advertise-tags=tag:container
-      - TS_SERVE_CONFIG=/config/pr-env-api.json
+      - TS_SERVE_CONFIG=/config/tailscale-proxy.json
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
     volumes:
@@ -16,25 +16,25 @@ services:
       - /dev/net/tun:/dev/net/tun
     cap_add:
       - net_admin
-    # restart: unless-stopped
+    restart: unless-stopped
     networks:
-      - pr-env-network
+      - ephemeral-environments-network
 
   mysql:
     image: mysql:8.0
-    container_name: pr-env-api-mysql
-    # restart: unless-stopped
+    container_name: ephemeral-environments-api-mysql
+    restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-rootpassword}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-pr_environments}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-ephemeral_environments}
       - MYSQL_USER=${MYSQL_USER:-prenvuser}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-prenvpassword}
     volumes:
-      - pr-env-mysql-data:/var/lib/mysql
+      - ephemeral-environments-mysql-data:/var/lib/mysql
     ports:
       - "3306:3306"
     networks:
-      - pr-env-network
+      - ephemeral-environments-network
     command: --default-authentication-plugin=mysql_native_password
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "--password=${MYSQL_ROOT_PASSWORD:-rootpassword}"]
@@ -42,12 +42,12 @@ services:
       timeout: 5s
       retries: 5
 
-  pr-env-api:
+  ephemeral-environments-api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: pr-env-api
-    # restart: unless-stopped
+    container_name: ephemeral-environments-api
+    restart: unless-stopped
     volumes:
       - ./:/app
       - /app/node_modules
@@ -59,7 +59,7 @@ services:
       - TAILSCALE_DOMAIN=${TAILSCALE_DOMAIN:-tailf31c84.ts.net}
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-pr_environments}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-ephemeral_environments}
       - MYSQL_USER=${MYSQL_USER:-prenvuser}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-prenvpassword}
       - LOG_LEVEL=${LOG_LEVEL:-info}
@@ -69,7 +69,7 @@ services:
       # GitHub Authentication
       - GITHUB_TOKEN=${GITHUB_TOKEN}
     networks:
-      - pr-env-network
+      - ephemeral-environments-network
     depends_on:
       tailscale:
         condition: service_started
@@ -77,12 +77,12 @@ services:
         condition: service_healthy
 
 networks:
-  pr-env-network:
-    name: "pr-env-network"
+  ephemeral-environments-network:
+    name: "ephemeral-environments-network"
     attachable: true
 
 volumes:
-  pr-env-api-ts-state:
+  ephemeral-environments-api-ts-state:
     driver: local
-  pr-env-mysql-data:
+  ephemeral-environment-mysql-data:
     driver: local

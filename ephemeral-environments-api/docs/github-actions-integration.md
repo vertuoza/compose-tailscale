@@ -222,7 +222,7 @@ The workflow above uses a custom GitHub Action that encapsulates the PR environm
 | `pr_number` | PR number | Yes | |
 | `services_json` | JSON array of services with name and image_url properties | Yes | |
 | `github_token` | GitHub token for commenting on PRs | Yes | |
-| `api_url` | URL of the PR Environment API | No | 'https://pr-env-api.tailf31c84.ts.net' |
+| `api_url` | URL of the PR Environments API | No | 'https://ephemeral-environments-api.tailf31c84.ts.net' |
 | `tailscale_domain` | Tailscale domain for the PR environment | No | 'tailf31c84.ts.net' |
 
 #### PR Environment Remove Action
@@ -232,7 +232,7 @@ The workflow above uses a custom GitHub Action that encapsulates the PR environm
 | `repository_name` | Name of the repository | Yes | |
 | `pr_number` | PR number | Yes | |
 | `github_token` | GitHub token for commenting on PRs | Yes | |
-| `api_url` | URL of the PR Environment API | No | 'https://pr-env-api.tailf31c84.ts.net' |
+| `api_url` | URL of the PR Environments API | No | 'https://ephemeral-environments-api.tailf31c84.ts.net' |
 | `tailscale_domain` | Tailscale domain for the PR environment | No | 'tailf31c84.ts.net' |
 
 ### Action Outputs
