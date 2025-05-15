@@ -48,6 +48,6 @@ jobs:
           REMOTE_HOST: ${{ vars.REMOTE_HOST }}
         run: |
           # Navigate to the API directory and rebuild
-          ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "cd ~/compose-tailscale/ephemeral-environments-api && docker compose down && docker compose build && docker compose up -d"
+          ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "cd ~/compose-tailscale && docker compose up -d --build"
 
           echo "API rebuilt successfully"
