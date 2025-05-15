@@ -59,6 +59,8 @@ services:
       - PORT=4000
       - NODE_ENV=development
       - TAILSCALE_DOMAIN=${TAILSCALE_DOMAIN:-tailf31c84.ts.net}
+      - TAILSCALE_CLIENT_ID=${TAILSCALE_CLIENT_ID}
+      - TAILSCALE_CLIENT_SECRET=${TAILSCALE_CLIENT_SECRET}
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_DATABASE=${MYSQL_DATABASE:-ephemeral_environments}

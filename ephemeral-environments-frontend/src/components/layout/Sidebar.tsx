@@ -46,9 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({ environments }) => {
   return (
     <div className="w-64 h-screen bg-linear-sidebar border-r border-linear-border flex flex-col">
       <div className="p-4 border-b border-linear-border flex items-center">
-        <div className="w-8 h-8 rounded bg-linear-accent flex items-center justify-center mr-3 text-white font-medium">
-          E
-        </div>
+        <img src="/logo.svg" alt="Logo" className="w-8 h-8 mr-3" />
         <h1 className="text-lg font-semibold text-linear-text">Environments</h1>
       </div>
 
