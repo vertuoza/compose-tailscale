@@ -69,6 +69,11 @@ export const getEnvironmentLogs = async (id: string): Promise<EnvironmentLog[]> 
   return response.data.logs;
 };
 
+export const getServerLogs = async (id: string): Promise<string> => {
+  const response = await api.get(`/${id}/server-logs`);
+  return response.data.logs;
+};
+
 export const createEnvironment = async (data: CreateEnvironmentRequest): Promise<Environment> => {
   const response = await api.post('/', data);
   return response.data;

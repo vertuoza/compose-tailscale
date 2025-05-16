@@ -167,9 +167,26 @@ async function cleanupEnvironment(environmentDir) {
   }
 }
 
+/**
+ * Get Docker Compose logs for an environment
+ * @param {string} environmentId - Environment ID
+ * @returns {Promise<string>} - Docker Compose logs
+ */
+async function getEnvironmentLogs(environmentId) {
+  try {
+    const environmentDir = getEnvironmentDir(environmentId);
+    const logs = await executeCommand(`cd ${environmentDir} && docker compose logs`);
+    return logs;
+  } catch (err) {
+    logger.error(`Error getting Docker Compose logs: ${err.message}`);
+    throw err;
+  }
+}
+
 module.exports = {
   setupPrEnvironment,
   startEnvironment,
   stopEnvironment,
-  cleanupEnvironment
+  cleanupEnvironment,
+  getEnvironmentLogs
 };

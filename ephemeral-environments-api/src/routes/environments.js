@@ -9,6 +9,7 @@ const {
   listEnvironments,
   getEnvironmentLogs
 } = require('../services/environmentService');
+const dockerComposeService = require('../services/dockerComposeService');
 
 /**
  * Create a new PR environment
@@ -230,6 +231,24 @@ router.post('/local-setup', async (req, res) => {
     return res.status(201).json(environment);
   } catch (err) {
     logger.error(`Error setting up local environment: ${err.message}`);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+/**
+ * Get Docker Compose logs for an environment
+ * GET /api/environments/:id/server-logs
+ */
+router.get('/:id/server-logs', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get Docker Compose logs for the environment
+    const logs = await dockerComposeService.getEnvironmentLogs(id);
+
+    return res.status(200).json({ logs });
+  } catch (err) {
+    logger.error(`Error getting Docker Compose logs: ${err.message}`);
     return res.status(500).json({ error: err.message });
   }
 });
