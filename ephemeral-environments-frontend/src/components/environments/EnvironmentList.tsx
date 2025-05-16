@@ -13,7 +13,6 @@ interface EnvironmentListProps {
 const EnvironmentList: React.FC<EnvironmentListProps> = ({
   environments,
   onDelete,
-  title = 'Environments',
   emptyMessage = 'No environments found',
 }) => {
   const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string | null>(null);
@@ -28,10 +27,6 @@ const EnvironmentList: React.FC<EnvironmentListProps> = ({
 
   return (
     <div>
-      {title && (
-        <h2 className="text-xl font-semibold mb-4">{title}</h2>
-      )}
-
       {environments.length === 0 ? (
         <div className="bg-linear-dark-lighter rounded-lg border border-linear-border overflow-hidden">
           {emptyMessage}

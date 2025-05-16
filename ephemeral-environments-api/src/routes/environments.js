@@ -28,11 +28,14 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'pr_number is required' });
     }
 
-    if (!services || !Array.isArray(services) || services.length === 0) {
-      return res.status(400).json({ error: 'At least one service is required' });
+    // Ensure services is an array (default to empty array if not provided)
+    if (!services) {
+      services = [];
+    } else if (!Array.isArray(services)) {
+      return res.status(400).json({ error: 'Services must be an array' });
     }
 
-    // Validate each service has name and image_url
+    // If services are provided, validate each service has name and image_url
     for (const service of services) {
       if (!service.name) {
         return res.status(400).json({ error: 'Each service must have a name' });
@@ -78,11 +81,14 @@ router.put('/:id', async (req, res) => {
       return res.status(400).json({ error: 'repository_name is required' });
     }
 
-    if (!services || !Array.isArray(services) || services.length === 0) {
-      return res.status(400).json({ error: 'At least one service is required' });
+    // Ensure services is an array (default to empty array if not provided)
+    if (!services) {
+      services = [];
+    } else if (!Array.isArray(services)) {
+      return res.status(400).json({ error: 'Services must be an array' });
     }
 
-    // Validate each service has name and image_url
+    // If services are provided, validate each service has name and image_url
     for (const service of services) {
       if (!service.name) {
         return res.status(400).json({ error: 'Each service must have a name' });
@@ -207,33 +213,6 @@ router.get('/:id/logs', async (req, res) => {
   }
 });
 
-/**
- * Set up a local environment for testing without modifying service configurations
- * POST /api/environments/local-setup
- */
-router.post('/local-setup', async (req, res) => {
-  try {
-    const { repository_name, pr_number } = req.body;
-
-    // Validate required fields
-    if (!repository_name) {
-      return res.status(400).json({ error: 'repository_name is required' });
-    }
-
-    if (!pr_number) {
-      return res.status(400).json({ error: 'pr_number is required' });
-    }
-
-    // Set up local environment with default services
-    // We pass an empty array for services
-    const environment = await createEnvironment(repository_name, pr_number, []);
-
-    return res.status(201).json(environment);
-  } catch (err) {
-    logger.error(`Error setting up local environment: ${err.message}`);
-    return res.status(500).json({ error: err.message });
-  }
-});
 
 /**
  * Get Docker Compose logs for an environment

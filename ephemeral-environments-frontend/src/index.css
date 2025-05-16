@@ -63,7 +63,7 @@
   }
 
   .btn-primary {
-    @apply bg-linear-accent text-white hover:bg-linear-accent-lighter shadow-sm;
+    @apply bg-linear-accent text-indigo-100 hover:bg-linear-accent-lighter shadow-sm;
   }
 
   .btn-secondary {
@@ -71,7 +71,7 @@
   }
 
   .btn-danger {
-    @apply bg-linear-error bg-opacity-20 text-linear-error hover:bg-opacity-30 border border-linear-error border-opacity-30;
+    @apply bg-linear-error bg-opacity-20 text-red-100 hover:bg-opacity-30 border border-linear-error border-opacity-30;
   }
 
   .btn-sm {

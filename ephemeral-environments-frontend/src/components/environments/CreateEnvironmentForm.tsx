@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createEnvironment, CreateEnvironmentRequest } from '../../services/api';
 import Button from '../common/Button';
@@ -8,12 +8,30 @@ interface ServiceInput {
   image_url: string;
 }
 
+// List of available services from vertuoza-compose/docker-compose.yml
+const availableServices = [
+  'kernel',
+  'kernel-migrations',
+  'client-space',
+  'identity',
+  'identity-migrations',
+  'auth',
+  'work',
+  'work-migrations',
+  'ai',
+  'ai-migrations',
+  'gateway',
+  'vertuosoft',
+  'front',
+  'planning'
+];
+
 const CreateEnvironmentForm: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<CreateEnvironmentRequest>({
     repository_name: '',
     pr_number: 0,
-    services: [{ name: '', image_url: '' }],
+    services: [], // Start with empty services array
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,14 +64,13 @@ const CreateEnvironmentForm: React.FC = () => {
   };
 
   const removeService = (index: number) => {
-    if (formData.services.length > 1) {
-      const updatedServices = [...formData.services];
-      updatedServices.splice(index, 1);
-      setFormData({
-        ...formData,
-        services: updatedServices,
-      });
-    }
+    // Allow removing any service, even if it's the only one
+    const updatedServices = [...formData.services];
+    updatedServices.splice(index, 1);
+    setFormData({
+      ...formData,
+      services: updatedServices,
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -70,11 +87,13 @@ const CreateEnvironmentForm: React.FC = () => {
       return;
     }
 
-    // Validate services
-    for (const service of formData.services) {
-      if (!service.name.trim() || !service.image_url.trim()) {
-        setError('All service fields are required');
-        return;
+    // Validate services if any are provided
+    if (formData.services.length > 0) {
+      for (const service of formData.services) {
+        if (!service.name.trim() || !service.image_url.trim()) {
+          setError('All service fields are required');
+          return;
+        }
       }
     }
 
@@ -136,14 +155,14 @@ const CreateEnvironmentForm: React.FC = () => {
 
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
-            <label className="text-linear-text-secondary">Services</label>
+            <label className="text-linear-text-secondary">Service Overrides</label>
             <Button
               type="button"
               variant="secondary"
               size="sm"
               onClick={addService}
             >
-              Add Service
+              Add Service Override
             </Button>
           </div>
 
@@ -151,29 +170,39 @@ const CreateEnvironmentForm: React.FC = () => {
             <div key={index} className="mb-4 p-4 border border-linear-border rounded">
               <div className="flex justify-between items-center mb-2">
                 <h4 className="text-linear-text">Service #{index + 1}</h4>
-                {formData.services.length > 1 && (
-                  <Button
-                    type="button"
-                    variant="danger"
-                    size="sm"
-                    onClick={() => removeService(index)}
-                  >
-                    Remove
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => removeService(index)}
+                >
+                  Remove
+                </Button>
               </div>
 
               <div className="mb-3">
                 <label className="block text-linear-text-secondary mb-1">
                   Service Name
                 </label>
-                <input
-                  type="text"
-                  value={service.name}
-                  onChange={(e) => handleServiceChange(index, 'name', e.target.value)}
-                  className="w-full bg-linear-dark border border-linear-border rounded p-2 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent"
-                  placeholder="e.g., api"
-                />
+                <div className="relative">
+                  <select
+                    value={service.name}
+                    onChange={(e) => handleServiceChange(index, 'name', e.target.value)}
+                    className="w-full bg-linear-dark border border-linear-border rounded px-3 pr-8 py-1.5 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent appearance-none"
+                  >
+                    <option value="">Select a service</option>
+                    {availableServices.map((serviceName) => (
+                      <option key={serviceName} value={serviceName}>
+                        {serviceName}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-linear-text-secondary">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </div>
+                </div>
               </div>
 
               <div>
