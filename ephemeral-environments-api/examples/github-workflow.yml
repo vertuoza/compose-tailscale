@@ -153,6 +153,8 @@ jobs:
           pr_number: ${{ github.event.pull_request.number }}
           services_json: ${{ steps.prepare-services.outputs.services }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          tailscale_client_id: ${{ secrets.TAILSCALE_CLIENT_ID }}
+          tailscale_client_secret: ${{ secrets.TAILSCALE_CLIENT_SECRET }}
 
   # Remove PR environment
   remove-environment:
@@ -165,3 +167,5 @@ jobs:
           repository_name: ${{ github.repository.name }}
           pr_number: ${{ github.event.pull_request.number }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          tailscale_client_id: ${{ secrets.TAILSCALE_CLIENT_ID }}
+          tailscale_client_secret: ${{ secrets.TAILSCALE_CLIENT_SECRET }}

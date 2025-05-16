@@ -107,6 +107,18 @@ Key components:
    - Add the required variables:
      - `REMOTE_HOST`: The hostname or IP address of your remote server
 
+## Troubleshooting
+
+### Tailscale Issues
+
+If Tailscale is not working properly, you can restart just the Tailscale service with:
+
+```bash
+docker compose restart tailscale
+```
+
+This command will restart only the Tailscale container without affecting the other services in your stack. After running this command, wait a few moments for Tailscale to re-establish its connections.
+
 ## Architecture
 
 The system works as follows:
@@ -122,7 +134,7 @@ The system works as follows:
 
 The system uses Tailscale for networking and routing:
 
-- The frontend is accessible at the root path (`/`) through `ephemeral-environments-temp.tailf31c84.ts.net`
+- The frontend is accessible at the root path (`/`) through `ephemeral-environments.tailf31c84.ts.net`
 - The API is accessible through the `/api` path (e.g., `/api/environments`)
 - Tailscale handles the routing between these components securely
 

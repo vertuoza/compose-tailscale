@@ -82,7 +82,7 @@ const CreateEnvironmentForm: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const result = await createEnvironment(formData);
+      await createEnvironment(formData);
 
       // Navigate to the dashboard on success
       navigate('/');

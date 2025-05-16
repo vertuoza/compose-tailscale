@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { getEnvironments, deleteEnvironment, Environment } from '../services/api';
 import AppLayout from '../components/layout/AppLayout';
@@ -12,7 +12,7 @@ const ServicePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchEnvironments = async () => {
+  const fetchEnvironments = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getEnvironments({ repository_name: serviceName });
@@ -25,13 +25,13 @@ const ServicePage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [serviceName]);
 
   useEffect(() => {
     if (serviceName) {
       fetchEnvironments();
     }
-  }, [serviceName]);
+  }, [serviceName, fetchEnvironments]);
 
   const handleDelete = async (id: string) => {
     try {

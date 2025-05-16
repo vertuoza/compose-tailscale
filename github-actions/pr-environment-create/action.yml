@@ -15,6 +15,12 @@ inputs:
   github_token:
     description: 'GitHub token for commenting on PRs'
     required: true
+  tailscale_client_id:
+    description: 'Tailscale OAuth client ID'
+    required: true
+  tailscale_client_secret:
+    description: 'Tailscale OAuth client secret'
+    required: true
   api_url:
     description: 'URL of the Ephemeral Environments API'
     required: false
@@ -47,12 +53,15 @@ runs:
       run: |
         echo "url=https://${{ inputs.repository_name }}-pr-${{ inputs.pr_number }}.${{ inputs.tailscale_domain }}" >> $GITHUB_OUTPUT
 
-    - name: Connect to Tailscale
-      uses: tailscale/github-action@v2
+    - name: Set up Tailscale
+      uses: tailscale/github-action@v3
       with:
-        oauth-client-id: ${{ secrets.TAILSCALE_CLIENT_ID }}
-        oauth-secret: ${{ secrets.TAILSCALE_CLIENT_SECRET }}
-        tags: tag:github-actions
+        oauth-client-id: ${{ inputs.tailscale_client_id }}
+        oauth-secret: ${{ inputs.tailscale_client_secret }}
+        tags: tag:ci
+
+    - name: Wait for Tailscale to connect
+      run: sleep 10  # Give Tailscale a moment to establish connection
 
     - name: Create/Update ephemeral environment
       shell: bash

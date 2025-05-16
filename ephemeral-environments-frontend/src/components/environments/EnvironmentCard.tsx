@@ -108,7 +108,7 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
 
         <div className="mt-3 flex items-center justify-between">
           <div className="text-xs text-linear-text-secondary">
-            ID: <span className="font-mono">{id.substring(0, 8)}</span>
+            ID: <span className="font-mono" title={id}>{id}</span>
           </div>
 
           <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

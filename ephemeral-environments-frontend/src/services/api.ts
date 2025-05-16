@@ -1,12 +1,18 @@
 import axios from 'axios';
 
+// Get API base URL from environment variable or use default
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || '/api/environments';
+
 // Create an axios instance with default config
 const api = axios.create({
-  baseURL: '/api/environments', // This will use the proxy in development and the nginx config in production
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Log the API base URL being used (helpful for debugging)
+console.log(`Using API base URL: ${API_BASE_URL}`);
 
 // Types
 export interface Service {

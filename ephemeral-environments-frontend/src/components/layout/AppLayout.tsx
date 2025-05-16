@@ -16,9 +16,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   subtitle,
   environments,
 }) => {
+  // Filter environments to only show running ones in the sidebar
+  const runningEnvironments = environments.filter(env => env.status === 'running');
+
   return (
     <div className="flex h-screen bg-linear-dark text-linear-text overflow-hidden">
-      <Sidebar environments={environments} />
+      <Sidebar environments={runningEnvironments} />
       <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Background pattern overlay */}
         <div className="absolute inset-0 opacity-5 pointer-events-none z-0"

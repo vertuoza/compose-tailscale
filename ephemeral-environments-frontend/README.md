@@ -1,6 +1,25 @@
-# Getting Started with Create React App
+# Ephemeral Environments Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project provides a web interface for managing ephemeral environments. It was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+
+## API Configuration
+
+The application connects to the Ephemeral Environments API. By default, it uses `/api/environments` as the base URL, which works with the development proxy.
+
+You can configure the API base URL using environment variables:
+
+1. Create a `.env.local` file (or use the existing `.env.development` for development)
+2. Set `REACT_APP_API_BASE_URL` to your desired API endpoint:
+
+```
+# For local development with proxy
+REACT_APP_API_BASE_URL=/api/environments
+
+# For direct connection to a remote API
+REACT_APP_API_BASE_URL=https://ephemeral-environments.tailf31c84.ts.net/api/environments
+```
+
+See `.env.example` for more details.
 
 ## Available Scripts
 
