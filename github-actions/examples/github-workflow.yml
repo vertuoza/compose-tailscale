@@ -147,8 +147,9 @@ jobs:
           echo "services=$SERVICES" >> $GITHUB_OUTPUT
 
       - name: Create/Update PR Environment
-        uses: vertuoza/github-actions/pr-environment-create@main
+        uses: vertuoza/github-actions/ephemeral-environments@main
         with:
+          operation: create
           repository_name: ${{ github.repository.name }}
           pr_number: ${{ github.event.pull_request.number }}
           services_json: ${{ steps.prepare-services.outputs.services }}
@@ -162,8 +163,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Remove PR Environment
-        uses: vertuoza/github-actions/pr-environment-remove@main
+        uses: vertuoza/github-actions/ephemeral-environments@main
         with:
+          operation: remove
           repository_name: ${{ github.repository.name }}
           pr_number: ${{ github.event.pull_request.number }}
           github_token: ${{ secrets.GITHUB_TOKEN }}

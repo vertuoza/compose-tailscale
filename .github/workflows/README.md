@@ -29,9 +29,9 @@ This workflow automatically deploys the repository to a remote server when chang
 The following directories are excluded from the rsync transfer to preserve existing data:
 
 - `.git/`
-- `ephemeral-environments-api/data/`
-- `ephemeral-environments-api/logs/`
-- `ephemeral-environments-api/state/`
+- `/data/`
+- `/logs/`
+- `/state/`
 
 ### Setup Instructions
 

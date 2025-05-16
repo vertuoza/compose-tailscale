@@ -39,7 +39,7 @@ async function createEnvironment(repositoryName, prNumber, services) {
 
     // Trigger certificate generation with a delay to ensure Tailscale is ready
     // This is done asynchronously so we don't block the environment creation
-    setTimeout(5000) // 5 second delay
+    setTimeout(10000) // 10 second delay
       .then(() => tailscaleService.triggerCertificateGeneration(url))
       .catch(err => logger.error(`Error in delayed certificate generation: ${err.message}`));
 
@@ -138,7 +138,7 @@ async function updateEnvironment(repositoryName, prNumber, services) {
 
     // Trigger certificate generation with a delay to ensure Tailscale is ready
     // This is done asynchronously so we don't block the environment update
-    setTimeout(5000) // 5 second delay
+    setTimeout(10000) // 10 second delay
       .then(() => tailscaleService.triggerCertificateGeneration(url))
       .catch(err => logger.error(`Error in delayed certificate generation: ${err.message}`));
 

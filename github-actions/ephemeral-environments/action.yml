@@ -1,0 +1,143 @@
+name: 'Ephemeral Environment Management'
+description: 'Create, update, or remove ephemeral environments using the Ephemeral Environments API'
+author: 'Vertuoza'
+
+inputs:
+  operation:
+    description: 'Operation to perform (create or remove)'
+    required: true
+    default: 'create'
+  repository_name:
+    description: 'Name of the repository'
+    required: true
+  pr_number:
+    description: 'PR number'
+    required: true
+  services_json:
+    description: 'JSON array of services with name and image_url properties'
+    required: false
+    default: '[]'
+  github_token:
+    description: 'GitHub token for commenting on PRs'
+    required: true
+  tailscale_client_id:
+    description: 'Tailscale OAuth client ID'
+    required: true
+  tailscale_client_secret:
+    description: 'Tailscale OAuth client secret'
+    required: true
+  api_url:
+    description: 'URL of the Ephemeral Environments API'
+    required: false
+    default: 'https://ephemeral-environments.tailf31c84.ts.net'
+  tailscale_domain:
+    description: 'Tailscale domain for the ephemeral environment'
+    required: false
+    default: 'tailf31c84.ts.net'
+
+outputs:
+  environment_url:
+    description: 'URL of the ephemeral environment (only for create operation)'
+    value: ${{ steps.set-env-vars.outputs.url }}
+  environment_id:
+    description: 'ID of the ephemeral environment'
+    value: ${{ steps.set-env-vars.outputs.id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set environment variables
+      id: set-env-vars
+      shell: bash
+      run: |
+        echo "id=${{ inputs.repository_name }}-pr-${{ inputs.pr_number }}" >> $GITHUB_OUTPUT
+        echo "url=https://${{ inputs.repository_name }}-pr-${{ inputs.pr_number }}.${{ inputs.tailscale_domain }}" >> $GITHUB_OUTPUT
+
+    - name: Set up Tailscale
+      uses: tailscale/github-action@v3
+      with:
+        oauth-client-id: ${{ inputs.tailscale_client_id }}
+        oauth-secret: ${{ inputs.tailscale_client_secret }}
+        tags: tag:ci
+
+    - name: Wait for Tailscale to connect
+      shell: bash
+      run: sleep 10  # Give Tailscale a moment to establish connection
+
+    # Create/Update operation steps
+    - name: Check if environment exists
+      if: inputs.operation == 'create'
+      id: check-env
+      shell: bash
+      run: |
+        # Check if environment exists
+        HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" ${{ inputs.api_url }}/api/environments/${{ steps.set-env-vars.outputs.id }})
+
+        if [ "$HTTP_STATUS" == "200" ]; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Create new environment
+      if: inputs.operation == 'create' && steps.check-env.outputs.exists == 'false'
+      shell: bash
+      run: |
+        # Create the environment
+        curl --max-time 600 -X POST ${{ inputs.api_url }}/api/environments \
+          -H "Content-Type: application/json" \
+          -d '{
+            "repository_name": "${{ inputs.repository_name }}",
+            "pr_number": ${{ inputs.pr_number }},
+            "services": ${{ fromJson(inputs.services_json) }}
+          }'
+
+    - name: Update existing environment
+      if: inputs.operation == 'create' && steps.check-env.outputs.exists == 'true'
+      shell: bash
+      run: |
+        # Update the environment
+        curl --max-time 600 -X PUT ${{ inputs.api_url }}/api/environments/${{ steps.set-env-vars.outputs.id }} \
+          -H "Content-Type: application/json" \
+          -d '{
+            "repository_name": "${{ inputs.repository_name }}",
+            "services": ${{ fromJson(inputs.services_json) }}
+          }'
+
+    - name: Comment on PR about creation/update
+      if: inputs.operation == 'create'
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const isUpdate = '${{ steps.check-env.outputs.exists }}' === 'true';
+          const message = isUpdate
+            ? '🔄 Ephemeral environment updated at: ${{ steps.set-env-vars.outputs.url }}\n\nThe environment has been updated with your latest changes.'
+            : '🚀 Ephemeral environment deployed at: ${{ steps.set-env-vars.outputs.url }}\n\nThis environment will be automatically updated when you push new commits to this PR.';
+
+          github.rest.issues.createComment({
+            issue_number: ${{ inputs.pr_number }},
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: message
+          });
+
+    # Remove operation steps
+    - name: Remove PR environment
+      if: inputs.operation == 'remove'
+      shell: bash
+      run: |
+        curl --max-time 600 -X DELETE "${{ inputs.api_url }}/api/environments/${{ steps.set-env-vars.outputs.id }}"
+
+    - name: Comment on PR about removal
+      if: inputs.operation == 'remove'
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          github.rest.issues.createComment({
+            issue_number: ${{ inputs.pr_number }},
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: `🧹 Ephemeral environment has been removed.`
+          });

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getEnvironmentLogs, EnvironmentLog } from '../../services/api';
-import Button from '../common/Button';
+import Modal from '../common/Modal';
 
 interface EnvironmentLogsProps {
   environmentId: string;
@@ -34,16 +34,7 @@ const EnvironmentLogs: React.FC<EnvironmentLogsProps> = ({
   }, [environmentId]);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-linear-dark-lighter rounded-lg border border-linear-border w-full max-w-3xl max-h-[80vh] flex flex-col">
-        <div className="p-4 border-b border-linear-border flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Logs: {environmentId}</h2>
-          <Button variant="secondary" size="sm" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4">
+    <Modal title={`Logs: ${environmentId}`} onClose={onClose} maxWidth="max-w-3xl">
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-linear-accent"></div>
@@ -72,9 +63,7 @@ const EnvironmentLogs: React.FC<EnvironmentLogsProps> = ({
               ))}
             </div>
           )}
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 };
 
