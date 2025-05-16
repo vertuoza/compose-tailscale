@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createEnvironment, CreateEnvironmentRequest } from '../../services/api';
 import Button from '../common/Button';

@@ -11,7 +11,7 @@ services:
       - TS_USERSPACE=false
     volumes:
       - ${PWD}/config:/config
-      - ${PWD}/state:/var/lib/tailscale
+      - ephemeral-environments-ts-state:/var/lib/tailscale
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
