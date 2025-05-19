@@ -89,9 +89,6 @@ async function updateEnvironmentFiles(environmentDir, repositoryName, prNumber, 
       // Replace all occurrences of tailscale-subdomain with the environment ID
       envContent = envContent.replace(/tailscale-subdomain/g, environmentId);
 
-      // Add environment type
-      envContent += `\n# Environment Type\nENVIRONMENT_TYPE=${environmentType}\n`;
-
       // Add Google Cloud authentication if it exists in the parent environment
       if (environmentType === 'demo' && process.env.GOOGLE_CLOUD_KEYFILE_DEMO) {
         envContent += `\n# Google Cloud Authentication (DEMO)\nGOOGLE_CLOUD_KEYFILE_DEMO=${process.env.GOOGLE_CLOUD_KEYFILE_DEMO}\n`;
