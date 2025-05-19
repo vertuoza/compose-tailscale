@@ -22,12 +22,12 @@ export interface Service {
 
 export interface Environment {
   id: string;
-  repositoryName: string;
+  repositoryName?: string;
   services: Service[];
-  prNumber: number;
+  prNumber?: number;
   status: 'running' | 'error' | 'removed';
   url: string;
-  environmentType?: 'qa' | 'demo';
+  environmentType: 'qa' | 'demo';
   createdAt: string;
   updatedAt: string;
 }
@@ -42,8 +42,8 @@ export interface EnvironmentLog {
 }
 
 export interface CreateEnvironmentRequest {
-  repository_name: string;
-  pr_number: number;
+  repository_name?: string;
+  pr_number?: number;
   environment_type?: 'qa' | 'demo';
   services: {
     name: string;

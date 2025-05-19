@@ -19,13 +19,15 @@ router.post('/', async (req, res) => {
   try {
     const { repository_name, pr_number, services, environment_type = 'qa' } = req.body;
 
-    // Validate required fields
-    if (!repository_name) {
-      return res.status(400).json({ error: 'repository_name is required' });
-    }
+    // Validate required fields based on environment type
+    if (environment_type === 'qa') {
+      if (!repository_name) {
+        return res.status(400).json({ error: 'repository_name is required for QA environments' });
+      }
 
-    if (!pr_number) {
-      return res.status(400).json({ error: 'pr_number is required' });
+      if (!pr_number) {
+        return res.status(400).json({ error: 'pr_number is required for QA environments' });
+      }
     }
 
     // Ensure services is an array (default to empty array if not provided)
@@ -68,22 +70,32 @@ router.put('/:id', async (req, res) => {
     const { id } = req.params;
     const { repository_name, services, environment_type = 'qa' } = req.body;
 
-    // Parse the environment ID to get repository name and pr_number
-    const parts = id.split('-pr-');
+    let pr_number;
 
-    if (parts.length !== 2) {
-      return res.status(400).json({ error: 'Invalid environment ID format. Expected format: {repository_name}-pr-{pr_number}' });
-    }
+    // Handle different ID formats based on environment type
+    if (environment_type === 'demo') {
+      // For demo environments, we don't need to parse the ID
+      if (!id.startsWith('demo-')) {
+        return res.status(400).json({ error: 'Invalid demo environment ID format. Expected format: demo-{number}' });
+      }
+    } else {
+      // For QA environments, parse the ID to get repository name and PR number
+      const parts = id.split('-pr-');
 
-    const pr_number = parseInt(parts[1], 10);
+      if (parts.length !== 2) {
+        return res.status(400).json({ error: 'Invalid QA environment ID format. Expected format: {repository_name}-pr-{pr_number}' });
+      }
 
-    if (isNaN(pr_number)) {
-      return res.status(400).json({ error: 'Invalid PR number in environment ID' });
-    }
+      pr_number = parseInt(parts[1], 10);
 
-    // Validate required fields
-    if (!repository_name) {
-      return res.status(400).json({ error: 'repository_name is required' });
+      if (isNaN(pr_number)) {
+        return res.status(400).json({ error: 'Invalid PR number in environment ID' });
+      }
+
+      // Validate required fields for QA environments
+      if (!repository_name) {
+        return res.status(400).json({ error: 'repository_name is required for QA environments' });
+      }
     }
 
     // Ensure services is an array (default to empty array if not provided)
@@ -125,22 +137,32 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Parse the environment ID to get repository name and pr_number
-    const parts = id.split('-pr-');
+    let repositoryName, pr_number;
 
-    if (parts.length !== 2) {
-      return res.status(400).json({ error: 'Invalid environment ID format. Expected format: {repository_name}-pr-{pr_number}' });
+    // Handle different ID formats
+    if (id.startsWith('demo-')) {
+      // For demo environments, we don't need repository name or PR number
+      // Pass null values to removeEnvironment
+      repositoryName = null;
+      pr_number = null;
+    } else {
+      // For QA environments, parse the ID to get repository name and PR number
+      const parts = id.split('-pr-');
+
+      if (parts.length !== 2) {
+        return res.status(400).json({ error: 'Invalid QA environment ID format. Expected format: {repository_name}-pr-{pr_number}' });
+      }
+
+      repositoryName = parts[0];
+      pr_number = parseInt(parts[1], 10);
+
+      if (isNaN(pr_number)) {
+        return res.status(400).json({ error: 'Invalid PR number in environment ID' });
+      }
     }
 
-    const repositoryName = parts[0];
-    const pr_number = parseInt(parts[1], 10);
-
-    if (isNaN(pr_number)) {
-      return res.status(400).json({ error: 'Invalid PR number in environment ID' });
-    }
-
-    // Remove the environment using the repository name extracted from the ID
-    const result = await removeEnvironment(repositoryName, pr_number);
+    // Remove the environment
+    const result = await removeEnvironment(repositoryName, pr_number, id);
 
     return res.status(200).json(result);
   } catch (err) {

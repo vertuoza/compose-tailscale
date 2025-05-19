@@ -11,16 +11,26 @@ const {
 
 /**
  * Create a new PR environment
- * @param {string} repositoryName - Repository name
- * @param {number} prNumber - PR number
+ * @param {string} repositoryName - Repository name (optional for demo)
+ * @param {number} prNumber - PR number (optional for demo)
  * @param {Array} services - Array of services with name and image_url
  * @param {string} environmentType - Environment type (qa or demo)
  * @returns {Promise<Object>} - Environment details
  */
 async function createEnvironment(repositoryName, prNumber, services, environmentType = 'qa') {
   try {
-    // Create environment ID using repository name
-    const environmentId = createEnvironmentId(repositoryName, prNumber);
+    // Validate required fields based on environment type
+    if (environmentType === 'qa') {
+      if (!repositoryName) {
+        throw new Error('repository_name is required for QA environments');
+      }
+      if (!prNumber) {
+        throw new Error('pr_number is required for QA environments');
+      }
+    }
+
+    // Create environment ID based on type
+    const environmentId = await createEnvironmentId(repositoryName, prNumber, environmentType);
 
     // Check if environment already exists
     const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
@@ -29,7 +39,7 @@ async function createEnvironment(repositoryName, prNumber, services, environment
       return updateEnvironment(repositoryName, prNumber, services);
     }
 
-    // Set up PR environment with vertuoza-compose
+    // Set up environment with vertuoza-compose
     const environmentDir = await dockerComposeService.setupPrEnvironment(repositoryName, prNumber, services, environmentType);
 
     // Start the environment
@@ -47,10 +57,18 @@ async function createEnvironment(repositoryName, prNumber, services, environment
     // Store environment in database
     const servicesData = JSON.stringify(services);
 
-    await run(
-      'INSERT INTO environments (id, repository_name, services_data, pr_number, status, url, environment_type) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [environmentId, repositoryName, servicesData, prNumber, 'running', url, environmentType]
-    );
+    // Insert into database with appropriate values
+    if (environmentType === 'demo') {
+      await run(
+        'INSERT INTO environments (id, services_data, status, url, environment_type) VALUES (?, ?, ?, ?, ?)',
+        [environmentId, servicesData, 'running', url, environmentType]
+      );
+    } else {
+      await run(
+        'INSERT INTO environments (id, repository_name, services_data, pr_number, status, url, environment_type) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [environmentId, repositoryName, servicesData, prNumber, 'running', url, environmentType]
+      );
+    }
 
     // Log the action
     await run(
@@ -58,18 +76,25 @@ async function createEnvironment(repositoryName, prNumber, services, environment
       [environmentId, 'create', 'success', `Environment created successfully with ${services.length} services`]
     );
 
-    return {
+    // Return response with appropriate values
+    const response = {
       id: environmentId,
-      repositoryName,
       services: services.map(s => ({
         name: s.name,
         imageUrl: s.image_url
       })),
-      prNumber,
       status: 'running',
       url,
       environmentType
     };
+
+    // Add repository_name and prNumber only for QA environments
+    if (environmentType === 'qa') {
+      response.repositoryName = repositoryName;
+      response.prNumber = prNumber;
+    }
+
+    return response;
   } catch (err) {
     logger.error(`Error creating environment: ${err.message}`);
 
@@ -111,17 +136,38 @@ async function createEnvironment(repositoryName, prNumber, services, environment
 }
 
 /**
- * Update an existing PR environment
- * @param {string} repositoryName - Repository name
- * @param {number} prNumber - PR number
+ * Update an existing environment
+ * @param {string} repositoryName - Repository name (optional for demo)
+ * @param {number} prNumber - PR number (optional for demo)
  * @param {Array} services - Array of services with name and image_url
  * @param {string} environmentType - Environment type (qa or demo)
  * @returns {Promise<Object>} - Environment details
  */
 async function updateEnvironment(repositoryName, prNumber, services, environmentType = 'qa') {
   try {
-    // Create environment ID using repository name
-    const environmentId = createEnvironmentId(repositoryName, prNumber);
+    // Validate required fields based on environment type
+    if (environmentType === 'qa') {
+      if (!repositoryName) {
+        throw new Error('repository_name is required for QA environments');
+      }
+      if (!prNumber) {
+        throw new Error('pr_number is required for QA environments');
+      }
+    }
+
+    // Create or get environment ID based on type
+    let environmentId;
+    if (environmentType === 'demo') {
+      // For demo environments, we need to check if it exists by ID pattern
+      const existingDemo = await get('SELECT id FROM environments WHERE id LIKE "demo-%" AND environment_type = "demo" LIMIT 1');
+      if (existingDemo) {
+        environmentId = existingDemo.id;
+      } else {
+        environmentId = await createEnvironmentId(null, null, 'demo');
+      }
+    } else {
+      environmentId = await createEnvironmentId(repositoryName, prNumber, 'qa');
+    }
 
     // Check if environment exists
     const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
@@ -130,7 +176,7 @@ async function updateEnvironment(repositoryName, prNumber, services, environment
       return createEnvironment(repositoryName, prNumber, services, environmentType);
     }
 
-    // Set up PR environment with vertuoza-compose
+    // Set up environment with vertuoza-compose
     const environmentDir = await dockerComposeService.setupPrEnvironment(repositoryName, prNumber, services, environmentType);
 
     // Update the environment
@@ -147,11 +193,18 @@ async function updateEnvironment(repositoryName, prNumber, services, environment
 
     const servicesData = JSON.stringify(services);
 
-    // Update environment in database
-    await run(
-      'UPDATE environments SET repository_name = ?, services_data = ?, status = ?, environment_type = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [repositoryName, servicesData, 'running', environmentType, environmentId]
-    );
+    // Update database with appropriate values
+    if (environmentType === 'demo') {
+      await run(
+        'UPDATE environments SET services_data = ?, status = ?, environment_type = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [servicesData, 'running', environmentType, environmentId]
+      );
+    } else {
+      await run(
+        'UPDATE environments SET repository_name = ?, services_data = ?, status = ?, environment_type = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [repositoryName, servicesData, 'running', environmentType, environmentId]
+      );
+    }
 
     // Log the action
     await run(
@@ -159,18 +212,25 @@ async function updateEnvironment(repositoryName, prNumber, services, environment
       [environmentId, 'update', 'success', `Environment updated successfully with ${services.length} services`]
     );
 
-    return {
+    // Return response with appropriate values
+    const response = {
       id: environmentId,
-      repositoryName,
       services: services.map(s => ({
         name: s.name,
         imageUrl: s.image_url
       })),
-      prNumber,
       status: 'running',
       url,
       environmentType
     };
+
+    // Add repository_name and prNumber only for QA environments
+    if (environmentType === 'qa') {
+      response.repositoryName = repositoryName;
+      response.prNumber = prNumber;
+    }
+
+    return response;
   } catch (err) {
     logger.error(`Error updating environment: ${err.message}`);
 
@@ -212,15 +272,18 @@ async function updateEnvironment(repositoryName, prNumber, services, environment
 }
 
 /**
- * Remove a PR environment
- * @param {string} repositoryName - Repository name
- * @param {number} prNumber - PR number
+ * Remove an environment
+ * @param {string} repositoryName - Repository name (optional for demo)
+ * @param {number} prNumber - PR number (optional for demo)
+ * @param {string} environmentId - Environment ID (required if repositoryName and prNumber are null)
  * @returns {Promise<Object>} - Result
  */
-async function removeEnvironment(repositoryName, prNumber) {
+async function removeEnvironment(repositoryName, prNumber, environmentId) {
   try {
-    // Create environment ID using repository name
-    const environmentId = createEnvironmentId(repositoryName, prNumber);
+    // If environmentId is not provided, create it from repositoryName and prNumber
+    if (!environmentId) {
+      environmentId = await createEnvironmentId(repositoryName, prNumber, 'qa');
+    }
 
     // Check if environment exists
     const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
@@ -253,12 +316,19 @@ async function removeEnvironment(repositoryName, prNumber) {
     // Clean up environment directory
     await dockerComposeService.cleanupEnvironment(environmentDir);
 
-    return {
+    // Create response object
+    const response = {
       id: environmentId,
-      repositoryName,
       status: 'removed',
       message: 'Environment removed successfully'
     };
+
+    // Add repositoryName only for QA environments
+    if (repositoryName) {
+      response.repositoryName = repositoryName;
+    }
+
+    return response;
   } catch (err) {
     logger.error(`Error removing environment: ${err.message}`);
 

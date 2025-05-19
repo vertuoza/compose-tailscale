@@ -77,15 +77,17 @@ const CreateEnvironmentForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate form
-    if (!formData.repository_name.trim()) {
-      setError('Repository name is required');
-      return;
-    }
+    // Validate form based on environment type
+    if (formData.environment_type === 'qa') {
+      if (!formData.repository_name || !formData.repository_name.trim()) {
+        setError('Repository name is required for QA environments');
+        return;
+      }
 
-    if (formData.pr_number <= 0) {
-      setError('PR number must be greater than 0');
-      return;
+      if (!formData.pr_number || formData.pr_number <= 0) {
+        setError('PR number must be greater than 0 for QA environments');
+        return;
+      }
     }
 
     // Validate services if any are provided
@@ -127,35 +129,6 @@ const CreateEnvironmentForm: React.FC = () => {
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label className="block text-linear-text-secondary mb-1">
-            Repository Name
-          </label>
-          <input
-            type="text"
-            name="repository_name"
-            value={formData.repository_name}
-            onChange={handleInputChange}
-            className="w-full bg-linear-dark border border-linear-border rounded p-2 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent"
-            placeholder="e.g., my-project"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-linear-text-secondary mb-1">
-            PR Number
-          </label>
-          <input
-            type="number"
-            name="pr_number"
-            value={formData.pr_number || ''}
-            onChange={handleInputChange}
-            className="w-full bg-linear-dark border border-linear-border rounded p-2 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent"
-            placeholder="e.g., 123"
-            min="1"
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-linear-text-secondary mb-1">
             Environment Type
           </label>
           <div className="relative">
@@ -175,6 +148,41 @@ const CreateEnvironmentForm: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Conditional fields for QA environment */}
+        {formData.environment_type === 'qa' && (
+          <>
+            <div className="mb-4">
+              <label className="block text-linear-text-secondary mb-1">
+                Repository Name
+              </label>
+              <input
+                type="text"
+                name="repository_name"
+                value={formData.repository_name}
+                onChange={handleInputChange}
+                className="w-full bg-linear-dark border border-linear-border rounded p-2 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent"
+                placeholder="e.g., my-project"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-linear-text-secondary mb-1">
+                PR Number
+              </label>
+              <input
+                type="number"
+                name="pr_number"
+                value={formData.pr_number || ''}
+                onChange={handleInputChange}
+                className="w-full bg-linear-dark border border-linear-border rounded p-2 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent"
+                placeholder="e.g., 123"
+                min="1"
+              />
+            </div>
+          </>
+        )}
+
 
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">

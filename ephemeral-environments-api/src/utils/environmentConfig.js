@@ -1,6 +1,7 @@
 const yaml = require('yaml');
 const { logger } = require('./logger');
 const fileSystem = require('./fileSystem');
+const { get } = require('../database');
 
 // Environment directory
 const environmentsDir = fileSystem.joinPath(__dirname, '../../data/environments');
@@ -9,13 +10,42 @@ const environmentsDir = fileSystem.joinPath(__dirname, '../../data/environments'
 const tailscaleDomain = process.env.TAILSCALE_DOMAIN || 'tailf31c84.ts.net';
 
 /**
- * Create environment ID from repository name and PR number
- * @param {string} repositoryName - Repository name
- * @param {number} prNumber - PR number
- * @returns {string} - Environment ID
+ * Create environment ID from repository name and PR number or generate a demo ID
+ * @param {string} repositoryName - Repository name (optional for demo)
+ * @param {number} prNumber - PR number (optional for demo)
+ * @param {string} environmentType - Environment type (qa or demo)
+ * @returns {Promise<string>} - Environment ID
  */
-function createEnvironmentId(repositoryName, prNumber) {
-  return `${repositoryName}-pr-${prNumber}`;
+async function createEnvironmentId(repositoryName, prNumber, environmentType = 'qa') {
+  if (environmentType === 'demo') {
+    // Get next available demo number
+    const nextDemoNumber = await getNextDemoNumber();
+    return `demo-${nextDemoNumber}`;
+  } else {
+    // Default QA behavior
+    return `${repositoryName}-pr-${prNumber}`;
+  }
+}
+
+/**
+ * Get the next available demo number by querying existing environments
+ * @returns {Promise<number>} - Next available demo number
+ */
+async function getNextDemoNumber() {
+  // Query the environments table to find the highest demo number
+  const query = "SELECT id FROM environments WHERE id LIKE 'demo-%' ORDER BY id DESC LIMIT 1";
+  const latestDemo = await get(query);
+
+  if (!latestDemo) {
+    // No demo environments exist yet, start with 1
+    return 1;
+  }
+
+  // Extract the number from the ID (format: 'demo-X')
+  const currentNumber = parseInt(latestDemo.id.split('-')[1], 10);
+
+  // Return the next number in sequence
+  return currentNumber + 1;
 }
 
 /**
@@ -49,7 +79,7 @@ function createEnvironmentUrl(environmentId) {
 async function updateEnvironmentFiles(environmentDir, repositoryName, prNumber, services, environmentType = 'qa') {
   try {
     // Create environment ID (subdomain) using repository name
-    const environmentId = createEnvironmentId(repositoryName, prNumber);
+    const environmentId = await createEnvironmentId(repositoryName, prNumber, environmentType);
 
     // Update .env file if it exists
     const envPath = fileSystem.joinPath(environmentDir, '.env');
@@ -137,6 +167,7 @@ module.exports = {
   environmentsDir,
   tailscaleDomain,
   createEnvironmentId,
+  getNextDemoNumber,
   getEnvironmentDir,
   createEnvironmentUrl,
   updateEnvironmentFiles
