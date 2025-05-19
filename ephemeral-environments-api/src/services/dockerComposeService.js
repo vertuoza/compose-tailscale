@@ -20,7 +20,7 @@ const {
 async function setupPrEnvironment(repositoryName, prNumber, services, environmentType = 'qa') {
   try {
     // Create environment ID using repository name
-    const environmentId = createEnvironmentId(repositoryName, prNumber);
+    const environmentId = await createEnvironmentId(repositoryName, prNumber, environmentType);
 
     // Create environment directory
     const environmentDir = getEnvironmentDir(environmentId);

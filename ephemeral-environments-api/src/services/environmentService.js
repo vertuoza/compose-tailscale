@@ -100,7 +100,7 @@ async function createEnvironment(repositoryName, prNumber, services, environment
 
     try {
       // Check if environment exists before logging to database
-      const environmentId = createEnvironmentId(repositoryName, prNumber);
+      const environmentId = await createEnvironmentId(repositoryName, prNumber, environmentType);
       const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
 
       if (existingEnv) {
@@ -236,7 +236,7 @@ async function updateEnvironment(repositoryName, prNumber, services, environment
 
     try {
       // Check if environment exists before logging to database
-      const environmentId = createEnvironmentId(repositoryName, prNumber);
+      const environmentId = await createEnvironmentId(repositoryName, prNumber, environmentType);
       const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
 
       if (existingEnv) {
