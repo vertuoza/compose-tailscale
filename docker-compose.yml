@@ -69,7 +69,8 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - VERTUOZA_COMPOSE_DIR=/vertuoza-compose
       # Google Cloud Authentication
-      - GOOGLE_CLOUD_KEYFILE=${GOOGLE_CLOUD_KEYFILE}
+      - GOOGLE_CLOUD_KEYFILE_QA=${GOOGLE_CLOUD_KEYFILE_QA}
+      - GOOGLE_CLOUD_KEYFILE_DEMO=${GOOGLE_CLOUD_KEYFILE_DEMO}
       # GitHub Authentication
       - GITHUB_TOKEN=${GITHUB_TOKEN}
     ports:

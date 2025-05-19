@@ -28,16 +28,19 @@ const stringToColor = (str: string) => {
 const Sidebar: React.FC<SidebarProps> = ({ environments }) => {
   const location = useLocation();
 
-  // Group environments by service (repository name)
+  // Group environments by service (repository name) or by "demo" for demo environments
   const serviceGroups = useMemo(() => {
     const groups: Record<string, Environment[]> = {};
 
     environments.forEach(env => {
-      const { repositoryName } = env;
-      if (!groups[repositoryName]) {
-        groups[repositoryName] = [];
+      // For demo environments, use "demo" as the group key
+      // For qa environments, use the repository name
+      const groupKey = env.environmentType === 'demo' ? "demo" : env.repositoryName!;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
       }
-      groups[repositoryName].push(env);
+      groups[groupKey].push(env);
     });
 
     return groups;

@@ -34,8 +34,11 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
   onDelete,
   onViewLogs,
 }) => {
-  const { id, repositoryName, prNumber, status, url, createdAt } = environment;
-  const colorClass = `text-${repoToColor(repositoryName)}`;
+  const { id, repositoryName, prNumber, status, url, createdAt, environmentType = 'qa' } = environment;
+  // For DEMO environments, use a default color
+  const colorClass = repositoryName
+    ? `text-${repoToColor(repositoryName)}`
+    : 'text-linear-purple';
 
   const handleDelete = () => {
     if (window.confirm(`Are you sure you want to delete environment ${id}?`)) {
@@ -77,7 +80,7 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
             <div className="flex items-center">
               <h3 className="text-base font-medium text-linear-text truncate">
                 <Link to={`/environment/${id}`} className="hover:text-linear-accent">
-                  {repositoryName}
+                  {repositoryName || `Demo Environment ${id.split('-')[1]}`}
                 </Link>
               </h3>
               <div className="ml-2 flex-shrink-0">
@@ -86,9 +89,17 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
             </div>
 
             <div className="flex items-center text-sm text-linear-text-secondary mt-0.5">
-              <span className="truncate">PR #{prNumber}</span>
-              <span className="mx-1.5 text-linear-text-secondary opacity-40">•</span>
+              {prNumber ? (
+                <>
+                  <span className="truncate">PR #{prNumber}</span>
+                  <span className="mx-1.5 text-linear-text-secondary opacity-40">•</span>
+                </>
+              ) : null}
               <span className="whitespace-nowrap">{formatDate(createdAt)}</span>
+              <span className="mx-1.5 text-linear-text-secondary opacity-40">•</span>
+              <span className="uppercase text-xs bg-linear-dark-lighter px-1.5 py-0.5 rounded">
+                {environmentType}
+              </span>
             </div>
           </div>
         </div>

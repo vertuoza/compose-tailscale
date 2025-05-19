@@ -32,11 +32,12 @@ const CreateEnvironmentForm: React.FC = () => {
     repository_name: '',
     pr_number: 0,
     services: [], // Start with empty services array
+    environment_type: 'qa', // Default to QA environment
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -76,15 +77,17 @@ const CreateEnvironmentForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate form
-    if (!formData.repository_name.trim()) {
-      setError('Repository name is required');
-      return;
-    }
+    // Validate form based on environment type
+    if (formData.environment_type === 'qa') {
+      if (!formData.repository_name || !formData.repository_name.trim()) {
+        setError('Repository name is required for QA environments');
+        return;
+      }
 
-    if (formData.pr_number <= 0) {
-      setError('PR number must be greater than 0');
-      return;
+      if (!formData.pr_number || formData.pr_number <= 0) {
+        setError('PR number must be greater than 0 for QA environments');
+        return;
+      }
     }
 
     // Validate services if any are provided
@@ -126,32 +129,60 @@ const CreateEnvironmentForm: React.FC = () => {
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
           <label className="block text-linear-text-secondary mb-1">
-            Repository Name
+            Environment Type
           </label>
-          <input
-            type="text"
-            name="repository_name"
-            value={formData.repository_name}
-            onChange={handleInputChange}
-            className="w-full bg-linear-dark border border-linear-border rounded p-2 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent"
-            placeholder="e.g., my-project"
-          />
+          <div className="relative">
+            <select
+              name="environment_type"
+              value={formData.environment_type}
+              onChange={handleInputChange}
+              className="w-full bg-linear-dark border border-linear-border rounded px-3 pr-8 py-1.5 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent appearance-none"
+            >
+              <option value="qa">QA</option>
+              <option value="demo">DEMO</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-linear-text-secondary">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </div>
         </div>
 
-        <div className="mb-6">
-          <label className="block text-linear-text-secondary mb-1">
-            PR Number
-          </label>
-          <input
-            type="number"
-            name="pr_number"
-            value={formData.pr_number || ''}
-            onChange={handleInputChange}
-            className="w-full bg-linear-dark border border-linear-border rounded p-2 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent"
-            placeholder="e.g., 123"
-            min="1"
-          />
-        </div>
+        {/* Conditional fields for QA environment */}
+        {formData.environment_type === 'qa' && (
+          <>
+            <div className="mb-4">
+              <label className="block text-linear-text-secondary mb-1">
+                Repository Name
+              </label>
+              <input
+                type="text"
+                name="repository_name"
+                value={formData.repository_name}
+                onChange={handleInputChange}
+                className="w-full bg-linear-dark border border-linear-border rounded p-2 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent"
+                placeholder="e.g., my-project"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-linear-text-secondary mb-1">
+                PR Number
+              </label>
+              <input
+                type="number"
+                name="pr_number"
+                value={formData.pr_number || ''}
+                onChange={handleInputChange}
+                className="w-full bg-linear-dark border border-linear-border rounded p-2 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent"
+                placeholder="e.g., 123"
+                min="1"
+              />
+            </div>
+          </>
+        )}
+
 
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">

@@ -14,12 +14,13 @@ const {
  * @param {string} repositoryName - Repository name
  * @param {number} prNumber - PR number
  * @param {Array} services - Array of services with name and image_url
+ * @param {string} environmentType - Environment type (qa or demo)
  * @returns {Promise<string>} - Path to the configured folder
  */
-async function setupPrEnvironment(repositoryName, prNumber, services) {
+async function setupPrEnvironment(repositoryName, prNumber, services, environmentType = 'qa') {
   try {
     // Create environment ID using repository name
-    const environmentId = createEnvironmentId(repositoryName, prNumber);
+    const environmentId = await createEnvironmentId(repositoryName, prNumber, environmentType);
 
     // Create environment directory
     const environmentDir = getEnvironmentDir(environmentId);
@@ -32,9 +33,9 @@ async function setupPrEnvironment(repositoryName, prNumber, services) {
     await fileSystem.copyDirectory(sourceDir, environmentDir);
 
     // Update environment files with PR-specific configuration and multiple services
-    await updateEnvironmentFiles(environmentDir, repositoryName, prNumber, services);
+    await updateEnvironmentFiles(environmentDir, repositoryName, prNumber, services, environmentType);
 
-    logger.info(`Set up PR environment at ${environmentDir} with ${services.length} services`);
+    logger.info(`Set up PR environment at ${environmentDir} with ${services.length} services and environment type ${environmentType}`);
 
     return environmentDir;
   } catch (err) {
@@ -45,15 +46,22 @@ async function setupPrEnvironment(repositoryName, prNumber, services) {
 
 /**
  * Configure Google Cloud Authentication for Docker
+ * @param {string} environmentType - Environment type (qa or demo)
  * @returns {Promise<void>}
  */
-async function configureGoogleCloudAuth() {
+async function configureGoogleCloudAuth(environmentType = 'qa') {
   try {
     // Check if Google Cloud credentials are provided
-    const base64Credentials = process.env.GOOGLE_CLOUD_KEYFILE;
+    let base64Credentials;
+
+    if (environmentType === 'demo') {
+      base64Credentials = process.env.GOOGLE_CLOUD_KEYFILE_DEMO;
+    } else {
+      base64Credentials = process.env.GOOGLE_CLOUD_KEYFILE_QA;
+    }
 
     if (!base64Credentials) {
-      logger.warn('No Google Cloud credentials provided. Docker may not be able to pull images from Google Cloud Artifact Registry.');
+      logger.warn(`No Google Cloud credentials provided for ${environmentType} environment. Docker may not be able to pull images from Google Cloud Artifact Registry.`);
       return;
     }
 
@@ -77,9 +85,14 @@ async function configureGoogleCloudAuth() {
     logger.info(`Wrote Google Cloud credentials to temporary file: ${tempCredentialsPath}`);
 
     // Configure Docker to authenticate with Google Cloud Artifact Registry
+    // Use the appropriate project based on environment type
+    const projectId = environmentType === 'demo' ? 'vertuoza-demo-382712' : 'vertuoza-qa';
+
     await executeCommand(`gcloud auth activate-service-account --key-file=${tempCredentialsPath}`);
     await executeCommand('gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet');
-    logger.info('Configured Docker authentication with Google Cloud Artifact Registry');
+    await executeCommand(`gcloud config set project ${projectId}`);
+
+    logger.info(`Configured Docker authentication with Google Cloud Artifact Registry for ${environmentType} environment`);
   } catch (err) {
     logger.error(`Error configuring Google Cloud authentication: ${err.message}`);
     // Don't throw the error, just log it and continue
@@ -115,18 +128,19 @@ async function configureGitHubAuth() {
 /**
  * Start a Docker Compose environment
  * @param {string} environmentDir - Environment directory
+ * @param {string} environmentType - Environment type (qa or demo)
  * @returns {Promise<void>}
  */
-async function startEnvironment(environmentDir) {
+async function startEnvironment(environmentDir, environmentType = 'qa') {
   try {
     // Configure Google Cloud Authentication before starting the environment
-    await configureGoogleCloudAuth();
+    await configureGoogleCloudAuth(environmentType);
 
     // Configure GitHub Authentication before starting the environment
     await configureGitHubAuth();
 
     await executeCommand(`cd ${environmentDir} && docker compose up -d`);
-    logger.info(`Started Docker Compose environment at ${environmentDir}`);
+    logger.info(`Started Docker Compose environment at ${environmentDir} with ${environmentType} environment`);
   } catch (err) {
     logger.error(`Error starting Docker Compose environment: ${err.message}`);
     throw err;

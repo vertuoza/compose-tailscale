@@ -67,7 +67,13 @@ const EnvironmentDetailPage: React.FC = () => {
   return (
     <AppLayout
       title={environment ? `Environment: ${environment.id}` : 'Environment Details'}
-      subtitle={environment ? `Repository: ${environment.repositoryName}, PR: #${environment.prNumber}` : 'Loading...'}
+      subtitle={
+        environment
+          ? environment.repositoryName
+            ? `Repository: ${environment.repositoryName}, PR: #${environment.prNumber}`
+            : `Demo Environment ${environment.id.split('-')[1]}`
+          : 'Loading...'
+      }
       environments={environments}
     >
       {error ? (
@@ -85,8 +91,13 @@ const EnvironmentDetailPage: React.FC = () => {
               <div>
                 <h2 className="text-2xl font-semibold text-linear-text">{environment.id}</h2>
                 <div className="mt-2 text-linear-text-secondary">
-                  <p>Repository: {environment.repositoryName}</p>
-                  <p>PR: #{environment.prNumber}</p>
+                  {environment.repositoryName && (
+                    <>
+                      <p>Repository: {environment.repositoryName}</p>
+                      <p>PR: #{environment.prNumber}</p>
+                    </>
+                  )}
+                  <p>Environment Type: <span className="uppercase">{environment.environmentType || 'qa'}</span></p>
                   <p>Created: {new Date(environment.createdAt).toLocaleString()}</p>
                   <p>Updated: {new Date(environment.updatedAt).toLocaleString()}</p>
                 </div>

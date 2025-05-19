@@ -133,6 +133,7 @@ jobs:
         with:
           repository_name: ${{ github.repository.name }}
           pr_number: ${{ github.event.pull_request.number }}
+          environment_type: "qa" # Optional, can be "qa" or "demo", defaults to "qa"
           services_json: |
             [
               {
@@ -220,6 +221,7 @@ The workflow above uses a custom GitHub Action that encapsulates the PR environm
 |-------|-------------|----------|---------|
 | `repository_name` | Name of the repository | Yes | |
 | `pr_number` | PR number | Yes | |
+| `environment_type` | Environment type (qa or demo) | No | 'qa' |
 | `services_json` | JSON array of services with name and image_url properties | Yes | |
 | `github_token` | GitHub token for commenting on PRs | Yes | |
 | `api_url` | URL of the PR Environments API | No | 'https://ephemeral-environments-api.tailf31c84.ts.net' |
@@ -350,28 +352,53 @@ If you're using a different container registry, update the workflow file accordi
 ```
 
 ```yaml
-# For Google Container Registry
-- name: Setup GCP credentials
+# For Google Container Registry (QA environment)
+- name: Setup GCP credentials for QA
   if: github.event.action != 'closed'
   uses: google-github-actions/auth@v1
   with:
-    credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+    credentials_json: ${{ secrets.GCP_QA_CREDENTIALS }}
 
-- name: Login to GCP Container Registry
+- name: Login to GCP Container Registry for QA
   if: github.event.action != 'closed'
   uses: docker/login-action@v2
   with:
     registry: europe-west1-docker.pkg.dev
     username: _json_key
-    password: ${{ secrets.GCP_CREDENTIALS }}
+    password: ${{ secrets.GCP_QA_CREDENTIALS }}
 
-- name: Build and push Docker image
+- name: Build and push Docker image to QA
   if: github.event.action != 'closed'
   uses: docker/build-push-action@v4
   with:
     context: .
     push: true
     tags: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}
+```
+
+```yaml
+# For Google Container Registry (DEMO environment)
+- name: Setup GCP credentials for DEMO
+  if: github.event.action != 'closed'
+  uses: google-github-actions/auth@v1
+  with:
+    credentials_json: ${{ secrets.GCP_DEMO_CREDENTIALS }}
+
+- name: Login to GCP Container Registry for DEMO
+  if: github.event.action != 'closed'
+  uses: docker/login-action@v2
+  with:
+    registry: europe-west1-docker.pkg.dev
+    username: _json_key
+    password: ${{ secrets.GCP_DEMO_CREDENTIALS }}
+
+- name: Build and push Docker image to DEMO
+  if: github.event.action != 'closed'
+  uses: docker/build-push-action@v4
+  with:
+    context: .
+    push: true
+    tags: europe-west1-docker.pkg.dev/vertuoza-demo-382712/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}
 ```
 
 ### Using a Different Domain
@@ -385,6 +412,7 @@ If you're using a different Tailscale domain, specify it in the custom action:
   with:
     repository_name: ${{ github.repository.name }}
     pr_number: ${{ github.event.pull_request.number }}
+    environment_type: "demo" # Use the DEMO environment
     services_json: |
       [
         {
@@ -409,6 +437,7 @@ If your API server is at a different URL, specify it in the custom action:
   with:
     repository_name: ${{ github.repository.name }}
     pr_number: ${{ github.event.pull_request.number }}
+    environment_type: "qa" # Use the QA environment
     services_json: |
       [
         {
@@ -419,3 +448,51 @@ If your API server is at a different URL, specify it in the custom action:
     github_token: ${{ secrets.GITHUB_TOKEN }}
     api_url: https://your-custom-api-url.example.com
 ```
+
+### Switching Between QA and DEMO Environments
+
+You can use GitHub Actions workflow inputs to allow users to choose the environment type when manually triggering a workflow:
+
+```yaml
+name: PR Environment
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+    inputs:
+      environment_type:
+        description: 'Environment type (qa or demo)'
+        required: true
+        default: 'qa'
+        type: choice
+        options:
+          - qa
+          - demo
+
+jobs:
+  # Build and manage environment
+  manage-environment:
+    runs-on: ubuntu-latest
+    steps:
+      # For PR opened/updated events
+      - name: Create/Update PR Environment
+        if: github.event.action != 'closed'
+        uses: vertuoza/github-actions/pr-environment-create@main
+        with:
+          repository_name: ${{ github.repository.name }}
+          pr_number: ${{ github.event.pull_request.number }}
+          environment_type: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment_type || 'qa' }}
+          services_json: |
+            [
+              {
+                "name": "${{ github.repository.name }}",
+                "image_url": "ghcr.io/vertuoza/${{ github.repository.name }}:pr-${{ github.event.pull_request.number }}"
+              }
+            ]
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+```
+
+This allows you to:
+1. Automatically create QA environments for normal PR events
+2. Manually trigger the workflow to create a DEMO environment when needed
