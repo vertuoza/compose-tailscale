@@ -310,20 +310,12 @@ async function removeEnvironment(environmentId) {
     // Clean up environment directory
     await dockerComposeService.cleanupEnvironment(environmentDir);
 
-    // Get environment details to include in response
-    const environment = await get('SELECT repository_name, environment_type FROM environments WHERE id = ? LIMIT 1', [environmentId]);
-
-    // Create response object
+    // Create simple response object
     const response = {
       id: environmentId,
       status: 'removed',
       message: 'Environment removed successfully'
     };
-
-    // Add repositoryName if it exists
-    if (environment && environment.repository_name) {
-      response.repositoryName = environment.repository_name;
-    }
 
     return response;
   } catch (err) {
