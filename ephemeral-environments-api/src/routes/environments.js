@@ -130,39 +130,15 @@ router.put('/:id', async (req, res) => {
 });
 
 /**
- * Remove a PR environment
+ * Remove an environment
  * DELETE /api/environments/:id
  */
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
-    let repositoryName, pr_number;
-
-    // Handle different ID formats
-    if (id.startsWith('demo-')) {
-      // For demo environments, we don't need repository name or PR number
-      // Pass null values to removeEnvironment
-      repositoryName = null;
-      pr_number = null;
-    } else {
-      // For QA environments, parse the ID to get repository name and PR number
-      const parts = id.split('-pr-');
-
-      if (parts.length !== 2) {
-        return res.status(400).json({ error: 'Invalid QA environment ID format. Expected format: {repository_name}-pr-{pr_number}' });
-      }
-
-      repositoryName = parts[0];
-      pr_number = parseInt(parts[1], 10);
-
-      if (isNaN(pr_number)) {
-        return res.status(400).json({ error: 'Invalid PR number in environment ID' });
-      }
-    }
-
-    // Remove the environment
-    const result = await removeEnvironment(repositoryName, pr_number, id);
+    // Remove the environment using just the ID
+    const result = await removeEnvironment(null, null, id);
 
     return res.status(200).json(result);
   } catch (err) {
