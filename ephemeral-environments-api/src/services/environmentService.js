@@ -14,9 +14,10 @@ const {
  * @param {string} repositoryName - Repository name
  * @param {number} prNumber - PR number
  * @param {Array} services - Array of services with name and image_url
+ * @param {string} environmentType - Environment type (qa or demo)
  * @returns {Promise<Object>} - Environment details
  */
-async function createEnvironment(repositoryName, prNumber, services) {
+async function createEnvironment(repositoryName, prNumber, services, environmentType = 'qa') {
   try {
     // Create environment ID using repository name
     const environmentId = createEnvironmentId(repositoryName, prNumber);
@@ -29,10 +30,10 @@ async function createEnvironment(repositoryName, prNumber, services) {
     }
 
     // Set up PR environment with vertuoza-compose
-    const environmentDir = await dockerComposeService.setupPrEnvironment(repositoryName, prNumber, services);
+    const environmentDir = await dockerComposeService.setupPrEnvironment(repositoryName, prNumber, services, environmentType);
 
     // Start the environment
-    await dockerComposeService.startEnvironment(environmentDir);
+    await dockerComposeService.startEnvironment(environmentDir, environmentType);
 
     // Create the URL for the PR environment
     const url = createEnvironmentUrl(environmentId);
@@ -47,8 +48,8 @@ async function createEnvironment(repositoryName, prNumber, services) {
     const servicesData = JSON.stringify(services);
 
     await run(
-      'INSERT INTO environments (id, repository_name, services_data, pr_number, status, url) VALUES (?, ?, ?, ?, ?, ?)',
-      [environmentId, repositoryName, servicesData, prNumber, 'running', url]
+      'INSERT INTO environments (id, repository_name, services_data, pr_number, status, url, environment_type) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [environmentId, repositoryName, servicesData, prNumber, 'running', url, environmentType]
     );
 
     // Log the action
@@ -66,7 +67,8 @@ async function createEnvironment(repositoryName, prNumber, services) {
       })),
       prNumber,
       status: 'running',
-      url
+      url,
+      environmentType
     };
   } catch (err) {
     logger.error(`Error creating environment: ${err.message}`);
@@ -113,9 +115,10 @@ async function createEnvironment(repositoryName, prNumber, services) {
  * @param {string} repositoryName - Repository name
  * @param {number} prNumber - PR number
  * @param {Array} services - Array of services with name and image_url
+ * @param {string} environmentType - Environment type (qa or demo)
  * @returns {Promise<Object>} - Environment details
  */
-async function updateEnvironment(repositoryName, prNumber, services) {
+async function updateEnvironment(repositoryName, prNumber, services, environmentType = 'qa') {
   try {
     // Create environment ID using repository name
     const environmentId = createEnvironmentId(repositoryName, prNumber);
@@ -124,14 +127,14 @@ async function updateEnvironment(repositoryName, prNumber, services) {
     const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
 
     if (!existingEnv) {
-      return createEnvironment(repositoryName, prNumber, services);
+      return createEnvironment(repositoryName, prNumber, services, environmentType);
     }
 
     // Set up PR environment with vertuoza-compose
-    const environmentDir = await dockerComposeService.setupPrEnvironment(repositoryName, prNumber, services);
+    const environmentDir = await dockerComposeService.setupPrEnvironment(repositoryName, prNumber, services, environmentType);
 
     // Update the environment
-    await dockerComposeService.startEnvironment(environmentDir);
+    await dockerComposeService.startEnvironment(environmentDir, environmentType);
 
     // Create the URL for the PR environment
     const url = createEnvironmentUrl(environmentId);
@@ -146,8 +149,8 @@ async function updateEnvironment(repositoryName, prNumber, services) {
 
     // Update environment in database
     await run(
-      'UPDATE environments SET repository_name = ?, services_data = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [repositoryName, servicesData, 'running', environmentId]
+      'UPDATE environments SET repository_name = ?, services_data = ?, status = ?, environment_type = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      [repositoryName, servicesData, 'running', environmentType, environmentId]
     );
 
     // Log the action
@@ -165,7 +168,8 @@ async function updateEnvironment(repositoryName, prNumber, services) {
       })),
       prNumber,
       status: 'running',
-      url
+      url,
+      environmentType
     };
   } catch (err) {
     logger.error(`Error updating environment: ${err.message}`);
@@ -305,19 +309,20 @@ async function getEnvironment(environmentId) {
       }
     }
 
-    return {
-      id: environment.id,
-      repositoryName: environment.repository_name,
-      services: services.map(s => ({
-        name: s.name,
-        imageUrl: s.image_url
-      })),
-      prNumber: environment.pr_number,
-      status: environment.status,
-      url: environment.url,
-      createdAt: environment.created_at,
-      updatedAt: environment.updated_at
-    };
+      return {
+        id: environment.id,
+        repositoryName: environment.repository_name,
+        services: services.map(s => ({
+          name: s.name,
+          imageUrl: s.image_url
+        })),
+        prNumber: environment.pr_number,
+        status: environment.status,
+        url: environment.url,
+        environmentType: environment.environment_type || 'qa',
+        createdAt: environment.created_at,
+        updatedAt: environment.updated_at
+      };
   } catch (err) {
     logger.error(`Error getting environment: ${err.message}`);
     throw err;
@@ -382,6 +387,7 @@ async function listEnvironments(filters = {}) {
         prNumber: env.pr_number,
         status: env.status,
         url: env.url,
+        environmentType: env.environment_type || 'qa',
         createdAt: env.created_at,
         updatedAt: env.updated_at
       };

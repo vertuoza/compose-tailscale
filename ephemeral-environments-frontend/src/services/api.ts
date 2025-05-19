@@ -27,6 +27,7 @@ export interface Environment {
   prNumber: number;
   status: 'running' | 'error' | 'removed';
   url: string;
+  environmentType?: 'qa' | 'demo';
   createdAt: string;
   updatedAt: string;
 }
@@ -43,6 +44,7 @@ export interface EnvironmentLog {
 export interface CreateEnvironmentRequest {
   repository_name: string;
   pr_number: number;
+  environment_type?: 'qa' | 'demo';
   services: {
     name: string;
     image_url: string;

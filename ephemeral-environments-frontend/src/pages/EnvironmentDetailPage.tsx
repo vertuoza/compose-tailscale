@@ -87,6 +87,7 @@ const EnvironmentDetailPage: React.FC = () => {
                 <div className="mt-2 text-linear-text-secondary">
                   <p>Repository: {environment.repositoryName}</p>
                   <p>PR: #{environment.prNumber}</p>
+                  <p>Environment Type: <span className="uppercase">{environment.environmentType || 'qa'}</span></p>
                   <p>Created: {new Date(environment.createdAt).toLocaleString()}</p>
                   <p>Updated: {new Date(environment.updatedAt).toLocaleString()}</p>
                 </div>

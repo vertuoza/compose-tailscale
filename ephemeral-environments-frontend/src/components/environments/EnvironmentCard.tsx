@@ -34,7 +34,7 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
   onDelete,
   onViewLogs,
 }) => {
-  const { id, repositoryName, prNumber, status, url, createdAt } = environment;
+  const { id, repositoryName, prNumber, status, url, createdAt, environmentType = 'qa' } = environment;
   const colorClass = `text-${repoToColor(repositoryName)}`;
 
   const handleDelete = () => {
@@ -89,6 +89,10 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
               <span className="truncate">PR #{prNumber}</span>
               <span className="mx-1.5 text-linear-text-secondary opacity-40">•</span>
               <span className="whitespace-nowrap">{formatDate(createdAt)}</span>
+              <span className="mx-1.5 text-linear-text-secondary opacity-40">•</span>
+              <span className="uppercase text-xs bg-linear-dark-lighter px-1.5 py-0.5 rounded">
+                {environmentType}
+              </span>
             </div>
           </div>
         </div>

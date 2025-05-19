@@ -17,7 +17,7 @@ const dockerComposeService = require('../services/dockerComposeService');
  */
 router.post('/', async (req, res) => {
   try {
-    const { repository_name, pr_number, services } = req.body;
+    const { repository_name, pr_number, services, environment_type = 'qa' } = req.body;
 
     // Validate required fields
     if (!repository_name) {
@@ -45,8 +45,13 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // Create the environment with multiple services
-    const environment = await createEnvironment(repository_name, pr_number, services);
+    // Validate environment_type if provided
+    if (environment_type && !['qa', 'demo'].includes(environment_type)) {
+      return res.status(400).json({ error: 'environment_type must be either "qa" or "demo"' });
+    }
+
+    // Create the environment with multiple services and environment type
+    const environment = await createEnvironment(repository_name, pr_number, services, environment_type);
     return res.status(201).json(environment);
   } catch (err) {
     logger.error(`Error creating environment: ${err.message}`);
@@ -61,7 +66,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { repository_name, services } = req.body;
+    const { repository_name, services, environment_type = 'qa' } = req.body;
 
     // Parse the environment ID to get repository name and pr_number
     const parts = id.split('-pr-');
@@ -98,8 +103,13 @@ router.put('/:id', async (req, res) => {
       }
     }
 
-    // Update the environment with multiple services
-    const environment = await updateEnvironment(repository_name, pr_number, services);
+    // Validate environment_type if provided
+    if (environment_type && !['qa', 'demo'].includes(environment_type)) {
+      return res.status(400).json({ error: 'environment_type must be either "qa" or "demo"' });
+    }
+
+    // Update the environment with multiple services and environment type
+    const environment = await updateEnvironment(repository_name, pr_number, services, environment_type);
     return res.status(200).json(environment);
   } catch (err) {
     logger.error(`Error updating environment: ${err.message}`);

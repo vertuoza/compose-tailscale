@@ -35,6 +35,30 @@ This script will:
 
 > **Security Note**: The installation script will prompt you for your Tailscale auth key, which is used to authenticate the Ephemeral Environment API Server with Tailscale. You can get your Tailscale auth key from the [Tailscale admin console](https://login.tailscale.com/admin/settings/keys).
 
+### 3. Configure Google Cloud Authentication
+
+The API server supports pulling Docker images from both QA and DEMO environments in Google Cloud Artifact Registry. To configure this:
+
+1. Get the service account key JSON files for both environments
+2. Convert them to base64:
+
+```bash
+cat qa-service-account.json | base64 -w 0 > qa-service-account-base64.txt
+cat demo-service-account.json | base64 -w 0 > demo-service-account-base64.txt
+```
+
+3. Add the base64-encoded keys to your `.env` file:
+
+```
+# Google Cloud Authentication for QA environment
+GOOGLE_CLOUD_KEYFILE_QA=<base64-encoded-qa-service-account-key>
+
+# Google Cloud Authentication for DEMO environment
+GOOGLE_CLOUD_KEYFILE_DEMO=<base64-encoded-demo-service-account-key>
+```
+
+This allows the API server to authenticate with Google Cloud and pull images from either the QA or DEMO environment based on the `environment_type` parameter specified when creating an environment.
+
 ### 4. Verify the Installation
 
 Check that the API server is running:

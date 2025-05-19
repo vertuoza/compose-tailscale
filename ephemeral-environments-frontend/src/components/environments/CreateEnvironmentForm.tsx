@@ -32,11 +32,12 @@ const CreateEnvironmentForm: React.FC = () => {
     repository_name: '',
     pr_number: 0,
     services: [], // Start with empty services array
+    environment_type: 'qa', // Default to QA environment
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -138,7 +139,7 @@ const CreateEnvironmentForm: React.FC = () => {
           />
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4">
           <label className="block text-linear-text-secondary mb-1">
             PR Number
           </label>
@@ -151,6 +152,28 @@ const CreateEnvironmentForm: React.FC = () => {
             placeholder="e.g., 123"
             min="1"
           />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-linear-text-secondary mb-1">
+            Environment Type
+          </label>
+          <div className="relative">
+            <select
+              name="environment_type"
+              value={formData.environment_type}
+              onChange={handleInputChange}
+              className="w-full bg-linear-dark border border-linear-border rounded px-3 pr-8 py-1.5 text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent appearance-none"
+            >
+              <option value="qa">QA</option>
+              <option value="demo">DEMO</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-linear-text-secondary">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div className="mb-4">

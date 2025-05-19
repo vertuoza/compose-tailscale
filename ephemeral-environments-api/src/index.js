@@ -7,6 +7,7 @@ const cors = require('cors');
 const { setupDatabase } = require('./database');
 const { logger } = require('./utils/logger');
 const fileSystem = require('./utils/fileSystem');
+const { addEnvironmentTypeColumn } = require('./migrations/add_environment_type');
 
 // Load environment variables
 dotenv.config({ path: fileSystem.joinPath(__dirname, '../.env') });
@@ -57,6 +58,9 @@ async function startServer() {
   try {
     // Initialize the database
     await setupDatabase();
+
+    // Run migrations
+    await addEnvironmentTypeColumn();
 
     // Start the server
     app.listen(PORT, '0.0.0.0', () => {

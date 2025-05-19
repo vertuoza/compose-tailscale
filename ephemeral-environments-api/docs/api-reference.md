@@ -15,21 +15,33 @@ POST /api/environments
 Request body:
 ```json
 {
-  "service_name": "kernel",
+  "repository_name": "vertuoza",
   "pr_number": 123,
-  "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123"
+  "environment_type": "qa", // Optional, defaults to "qa", can be "qa" or "demo"
+  "services": [
+    {
+      "name": "kernel",
+      "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123"
+    }
+  ]
 }
 ```
 
 Response:
 ```json
 {
-  "id": "kernel-pr-123",
-  "serviceName": "kernel",
+  "id": "vertuoza-pr-123",
+  "repositoryName": "vertuoza",
+  "services": [
+    {
+      "name": "kernel",
+      "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123"
+    }
+  ],
   "prNumber": 123,
   "status": "running",
-  "url": "https://kernel-pr-123.tailf31c84.ts.net",
-  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123"
+  "url": "https://vertuoza-pr-123.tailf31c84.ts.net",
+  "environmentType": "qa"
 }
 ```
 
@@ -42,19 +54,32 @@ PUT /api/environments/:id
 Request body:
 ```json
 {
-  "image_url": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123-updated"
+  "repository_name": "vertuoza",
+  "environment_type": "demo", // Optional, defaults to "qa", can be "qa" or "demo"
+  "services": [
+    {
+      "name": "kernel",
+      "image_url": "europe-west1-docker.pkg.dev/vertuoza-demo-382712/vertuoza/kernel:pr-123-updated"
+    }
+  ]
 }
 ```
 
 Response:
 ```json
 {
-  "id": "kernel-pr-123",
-  "serviceName": "kernel",
+  "id": "vertuoza-pr-123",
+  "repositoryName": "vertuoza",
+  "services": [
+    {
+      "name": "kernel",
+      "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-demo-382712/vertuoza/kernel:pr-123-updated"
+    }
+  ],
   "prNumber": 123,
   "status": "running",
-  "url": "https://kernel-pr-123.tailf31c84.ts.net",
-  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123-updated"
+  "url": "https://vertuoza-pr-123.tailf31c84.ts.net",
+  "environmentType": "demo"
 }
 ```
 
@@ -82,12 +107,18 @@ GET /api/environments/:id
 Response:
 ```json
 {
-  "id": "kernel-pr-123",
-  "serviceName": "kernel",
+  "id": "vertuoza-pr-123",
+  "repositoryName": "vertuoza",
+  "services": [
+    {
+      "name": "kernel",
+      "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123"
+    }
+  ],
   "prNumber": 123,
   "status": "running",
-  "url": "https://kernel-pr-123.tailf31c84.ts.net",
-  "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123",
+  "url": "https://vertuoza-pr-123.tailf31c84.ts.net",
+  "environmentType": "qa",
   "createdAt": "2025-05-08T11:18:30.000Z",
   "updatedAt": "2025-05-08T11:18:30.000Z"
 }
@@ -101,7 +132,7 @@ GET /api/environments
 
 Query parameters:
 - `status`: Filter by status (e.g., `running`, `removed`)
-- `service_name`: Filter by service name
+- `repository_name`: Filter by repository name
 - `pr_number`: Filter by PR number
 
 Response:
@@ -109,12 +140,18 @@ Response:
 {
   "environments": [
     {
-      "id": "kernel-pr-123",
-      "serviceName": "kernel",
+      "id": "vertuoza-pr-123",
+      "repositoryName": "vertuoza",
+      "services": [
+        {
+          "name": "kernel",
+          "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123"
+        }
+      ],
       "prNumber": 123,
       "status": "running",
-      "url": "https://kernel-pr-123.tailf31c84.ts.net",
-      "imageUrl": "europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel:pr-123",
+      "url": "https://vertuoza-pr-123.tailf31c84.ts.net",
+      "environmentType": "qa",
       "createdAt": "2025-05-08T11:18:30.000Z",
       "updatedAt": "2025-05-08T11:18:30.000Z"
     }
