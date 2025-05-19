@@ -273,17 +273,11 @@ async function updateEnvironment(repositoryName, prNumber, services, environment
 
 /**
  * Remove an environment
- * @param {string} repositoryName - Repository name (optional for demo)
- * @param {number} prNumber - PR number (optional for demo)
- * @param {string} environmentId - Environment ID (required if repositoryName and prNumber are null)
+ * @param {string} environmentId - Environment ID
  * @returns {Promise<Object>} - Result
  */
-async function removeEnvironment(repositoryName, prNumber, environmentId) {
+async function removeEnvironment(environmentId) {
   try {
-    // If environmentId is not provided, create it from repositoryName and prNumber
-    if (!environmentId) {
-      environmentId = await createEnvironmentId(repositoryName, prNumber, 'qa');
-    }
 
     // Check if environment exists
     const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
@@ -316,6 +310,9 @@ async function removeEnvironment(repositoryName, prNumber, environmentId) {
     // Clean up environment directory
     await dockerComposeService.cleanupEnvironment(environmentDir);
 
+    // Get environment details to include in response
+    const environment = await get('SELECT repository_name, environment_type FROM environments WHERE id = ? LIMIT 1', [environmentId]);
+
     // Create response object
     const response = {
       id: environmentId,
@@ -323,9 +320,9 @@ async function removeEnvironment(repositoryName, prNumber, environmentId) {
       message: 'Environment removed successfully'
     };
 
-    // Add repositoryName only for QA environments
-    if (repositoryName) {
-      response.repositoryName = repositoryName;
+    // Add repositoryName if it exists
+    if (environment && environment.repository_name) {
+      response.repositoryName = environment.repository_name;
     }
 
     return response;
@@ -333,20 +330,11 @@ async function removeEnvironment(repositoryName, prNumber, environmentId) {
     logger.error(`Error removing environment: ${err.message}`);
 
     try {
-      // Check if environment exists before logging to database
-      const environmentId = createEnvironmentId(repositoryName, prNumber);
-      const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
-
-      if (existingEnv) {
-        // Environment exists, safe to log to database
-        await run(
-          'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
-          [environmentId, 'remove', 'error', err.message]
-        );
-      } else {
-        // If we're trying to remove a non-existent environment, just log to console
-        logger.warn(`Cannot log removal error for non-existent environment: ${environmentId}`);
-      }
+      // Log error to database if possible
+      await run(
+        'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+        [environmentId, 'remove', 'error', err.message]
+      );
     } catch (logErr) {
       // If logging to database fails, just log to console
       logger.error(`Failed to log error to database: ${logErr.message}`);

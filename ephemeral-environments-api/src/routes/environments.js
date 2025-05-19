@@ -138,7 +138,7 @@ router.delete('/:id', async (req, res) => {
     const { id } = req.params;
 
     // Remove the environment using just the ID
-    const result = await removeEnvironment(null, null, id);
+    const result = await removeEnvironment(id);
 
     return res.status(200).json(result);
   } catch (err) {
