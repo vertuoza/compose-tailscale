@@ -113,7 +113,7 @@ async function triggerCertificateGeneration(environmentUrl) {
     // We don't care about the response, just that the request is made
     await axios.get(environmentUrl, {
       httpsAgent: agent,
-      timeout: 20000, // 10 second timeout
+      timeout: 20000, // 20 second timeout
       validateStatus: () => true // Accept any status code
     });
 

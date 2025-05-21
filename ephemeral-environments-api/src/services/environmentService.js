@@ -49,10 +49,10 @@ async function createEnvironment(repositoryName, prNumber, services, environment
     const url = createEnvironmentUrl(environmentId);
 
     // Trigger certificate generation with a delay to ensure Tailscale is ready
-    // This is done asynchronously so we don't block the environment creation
-    setTimeout(10000) // 10 second delay
-      .then(() => tailscaleService.triggerCertificateGeneration(url))
-      .catch(err => logger.error(`Error in delayed certificate generation: ${err.message}`));
+    await setTimeout(10000); // Wait for 10 second delay
+    // Then trigger certificate generation without waiting for it to complete
+    tailscaleService.triggerCertificateGeneration(url)
+      .catch(err => logger.error(`Error in certificate generation: ${err.message}`));
 
     // Store environment in database
     const servicesData = JSON.stringify(services);
@@ -186,10 +186,10 @@ async function updateEnvironment(repositoryName, prNumber, services, environment
     const url = createEnvironmentUrl(environmentId);
 
     // Trigger certificate generation with a delay to ensure Tailscale is ready
-    // This is done asynchronously so we don't block the environment update
-    setTimeout(10000) // 10 second delay
-      .then(() => tailscaleService.triggerCertificateGeneration(url))
-      .catch(err => logger.error(`Error in delayed certificate generation: ${err.message}`));
+    await setTimeout(10000); // Wait for 10 second delay
+    // Then trigger certificate generation without waiting for it to complete
+    tailscaleService.triggerCertificateGeneration(url)
+      .catch(err => logger.error(`Error in certificate generation: ${err.message}`));
 
     const servicesData = JSON.stringify(services);
 

@@ -9,6 +9,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 600000, // 600 seconds (10 minutes)
 });
 
 // Log the API base URL being used (helpful for debugging)

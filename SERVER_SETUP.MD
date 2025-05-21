@@ -25,7 +25,7 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 Tailscale
 ```
 curl -fsSL https://tailscale.com/install.sh | sh
-tailscale up
+tailscale up --ssh
 tailscale cert environment.tailf31c84.ts.net
 ```
 

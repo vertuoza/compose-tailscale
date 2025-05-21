@@ -79,6 +79,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
       - OTEL_SERVICE_NAME=vertuoza/kernel
+      - ELECTRONIC_INVOICING_SERVICE_URL=${ELECTRONIC_INVOICING_URL}
     depends_on:
       kernel-migrations:
         condition: service_completed_successfully
@@ -88,6 +89,7 @@ services:
       - tailscale-subdomain-network
 
   kernel-migrations:
+    platform: linux/amd64
     image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/kernel-migrations:${KERNEL_MIGRATIONS_VERSION:-latest}
     environment:
       - DB_HOST=mysql
@@ -233,52 +235,54 @@ services:
     networks:
       - tailscale-subdomain-network
 
-  # pdf-builder:
-  #   platform: linux/amd64
-  #   image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/pdf-builder:${PDF_BUILDER_VERSION:-latest}
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
-  #   environment:
-  #     - NODE_ENV=production
-  #     - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/pdf_builder
-  #     - GRAPHQL_SANDBOX=true
-  #     - CORS_ORIGIN=${APP_URL}
-  #     - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-  #     - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
-  #     - GCP_CREDENTIALS_CLIENT_ID=${GCP_CREDENTIALS_CLIENT_ID:-}
-  #     - GCP_CREDENTIALS_CLIENT_EMAIL=${GCP_CREDENTIALS_CLIENT_EMAIL:-}
-  #     - GCP_CREDENTIALS_PRIVATE_KEY=${GCP_CREDENTIALS_PRIVATE_KEY:-}
-  #     - GCP_CREDENTIALS_TYPE=${GCP_CREDENTIALS_TYPE:-}
-  #     - INTERNAL_SECRET=${INTERNAL_SECRET}
-  #     - OTEL_ENABLED=${OTEL_ENABLED:-0}
-  #     - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
-  #     - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
-  #     - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
-  #     - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
-  #     - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-  #     - OTEL_SERVICE_NAME=vertuoza/pdf-builder
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     postgres-db-init:
-  #       condition: service_completed_successfully
-  #     pdf-builder-migrations:
-  #       condition: service_completed_successfully
-  #   networks:
-  #     - tailscale-subdomain-network
+  pdf-builder:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/pdf-builder:${PDF_BUILDER_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/pdf_builder
+      - GRAPHQL_SANDBOX=true
+      - CORS_ORIGIN=${APP_URL}
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-}
+      - GCP_CREDENTIALS_CLIENT_ID=${GCP_CREDENTIALS_CLIENT_ID:-}
+      - GCP_CREDENTIALS_CLIENT_EMAIL=${GCP_CREDENTIALS_CLIENT_EMAIL:-}
+      - GCP_CREDENTIALS_PRIVATE_KEY=${GCP_CREDENTIALS_PRIVATE_KEY:-}
+      - GCP_CREDENTIALS_TYPE=${GCP_CREDENTIALS_TYPE:-}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - OTEL_ENABLED=${OTEL_ENABLED:-0}
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-}
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_SERVICE_NAME=vertuoza/pdf-builder
+      - KERNEL_URL=${KERNEL_URL}
+      - VERTUO_SOFT_URL=${VERTUO_SOFT_URL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-db-init:
+        condition: service_completed_successfully
+      pdf-builder-migrations:
+        condition: service_completed_successfully
+    networks:
+      - tailscale-subdomain-network
 
-  # pdf-builder-migrations:
-  #   platform: linux/amd64
-  #   image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/pdf-builder-migrations:${PDF_BUILDER_VERSION:-latest}
-  #   environment:
-  #     - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/pdf_builder
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     postgres-db-init:
-  #       condition: service_completed_successfully
-  #   networks:
-  #     - tailscale-subdomain-network
+  pdf-builder-migrations:
+    platform: linux/amd64
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/pdf-builder-migrations:${PDF_BUILDER_VERSION:-latest}
+    environment:
+      - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/pdf_builder
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-db-init:
+        condition: service_completed_successfully
+    networks:
+      - tailscale-subdomain-network
 
   work:
     platform: linux/amd64
@@ -389,7 +393,7 @@ services:
 
   ai-migrations:
     platform: linux/amd64
-    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/vertuo-ai-migrations:${PDF_BUILDER_VERSION:-latest}
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/vertuo-ai-migrations:${VERTUO_AI_VERSION:-latest}
     environment:
       - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/vertuo_ai
     depends_on:
