@@ -8,8 +8,7 @@ const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-  },
-  timeout: 600000, // 600 seconds (10 minutes)
+  }
 });
 
 // Log the API base URL being used (helpful for debugging)
@@ -26,7 +25,7 @@ export interface Environment {
   repositoryName?: string;
   services: Service[];
   prNumber?: number;
-  status: 'running' | 'error' | 'removed';
+  status: 'creating' | 'running' | 'error' | 'removed';
   url: string;
   environmentType: 'qa' | 'demo';
   createdAt: string;
@@ -80,6 +79,36 @@ export const getServerLogs = async (id: string): Promise<string> => {
 export const createEnvironment = async (data: CreateEnvironmentRequest): Promise<Environment> => {
   const response = await api.post('/', data);
   return response.data;
+};
+
+/**
+ * Poll for environment status until it's no longer 'creating' or max attempts reached
+ * @param id Environment ID to poll
+ * @param interval Polling interval in milliseconds (default: 10000ms = 10s)
+ * @param maxAttempts Maximum number of polling attempts (default: 30 = 5 minutes total with 10s interval)
+ * @returns Promise resolving to the environment when status changes from 'creating' or max attempts reached
+ */
+export const pollEnvironmentStatus = async (
+  id: string,
+  interval = 10000,
+  maxAttempts = 24
+): Promise<Environment> => {
+  let attempts = 0;
+
+  const checkStatus = async (): Promise<Environment> => {
+    attempts++;
+    const environment = await getEnvironment(id);
+
+    if (environment.status === 'creating' && attempts < maxAttempts) {
+      return new Promise(resolve => {
+        setTimeout(() => resolve(checkStatus()), interval);
+      });
+    }
+
+    return environment;
+  };
+
+  return checkStatus();
 };
 
 export const deleteEnvironment = async (id: string): Promise<{ id: string; status: string; message: string }> => {

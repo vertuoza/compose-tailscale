@@ -81,28 +81,86 @@ runs:
 
     - name: Create new environment
       if: inputs.operation == 'create' && steps.check-env.outputs.exists == 'false'
+      id: create-env
       shell: bash
       run: |
         # Create the environment
-        curl --max-time 600 -X POST ${{ inputs.api_url }}/api/environments \
+        RESPONSE=$(curl -s -X POST ${{ inputs.api_url }}/api/environments \
           -H "Content-Type: application/json" \
           -d '{
             "repository_name": "${{ inputs.repository_name }}",
             "pr_number": ${{ inputs.pr_number }},
             "services": ${{ fromJson(inputs.services_json) }}
-          }'
+          }')
+
+        # Extract environment ID and status
+        ENV_ID=$(echo $RESPONSE | jq -r '.id')
+        ENV_STATUS=$(echo $RESPONSE | jq -r '.status')
+
+        echo "id=$ENV_ID" >> $GITHUB_OUTPUT
+        echo "status=$ENV_STATUS" >> $GITHUB_OUTPUT
+        echo "Environment ID: $ENV_ID, Initial status: $ENV_STATUS"
 
     - name: Update existing environment
       if: inputs.operation == 'create' && steps.check-env.outputs.exists == 'true'
+      id: update-env
       shell: bash
       run: |
         # Update the environment
-        curl --max-time 600 -X PUT ${{ inputs.api_url }}/api/environments/${{ steps.set-env-vars.outputs.id }} \
+        RESPONSE=$(curl -s -X PUT ${{ inputs.api_url }}/api/environments/${{ steps.set-env-vars.outputs.id }} \
           -H "Content-Type: application/json" \
           -d '{
             "repository_name": "${{ inputs.repository_name }}",
             "services": ${{ fromJson(inputs.services_json) }}
-          }'
+          }')
+
+        # Extract environment ID and status
+        ENV_ID=$(echo $RESPONSE | jq -r '.id')
+        ENV_STATUS=$(echo $RESPONSE | jq -r '.status')
+
+        echo "id=$ENV_ID" >> $GITHUB_OUTPUT
+        echo "status=$ENV_STATUS" >> $GITHUB_OUTPUT
+        echo "Environment ID: $ENV_ID, Initial status: $ENV_STATUS"
+
+    - name: Poll for environment status
+      if: inputs.operation == 'create'
+      id: poll-status
+      shell: bash
+      run: |
+        # Determine which step was executed
+        if [ "${{ steps.check-env.outputs.exists }}" == "true" ]; then
+          ENV_ID="${{ steps.update-env.outputs.id }}"
+        else
+          ENV_ID="${{ steps.create-env.outputs.id }}"
+        fi
+
+        # If no ID was captured, use the one from set-env-vars
+        if [ -z "$ENV_ID" ]; then
+          ENV_ID="${{ steps.set-env-vars.outputs.id }}"
+        fi
+
+        echo "Polling for status of environment: $ENV_ID"
+
+        # Poll for status
+        MAX_ATTEMPTS=30
+        ATTEMPT=0
+        STATUS="creating"
+        FINAL_STATUS="unknown"
+
+        while [ "$STATUS" = "creating" ] && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+          sleep 10
+          ATTEMPT=$((ATTEMPT+1))
+          echo "Checking environment status (attempt $ATTEMPT/$MAX_ATTEMPTS)..."
+
+          ENV_DATA=$(curl -s ${{ inputs.api_url }}/api/environments/$ENV_ID)
+          STATUS=$(echo $ENV_DATA | jq -r '.status')
+
+          echo "Current status: $STATUS"
+        done
+
+        FINAL_STATUS=$STATUS
+        echo "Final environment status: $FINAL_STATUS"
+        echo "status=$FINAL_STATUS" >> $GITHUB_OUTPUT
 
     - name: Comment on PR about creation/update
       if: inputs.operation == 'create'
@@ -111,9 +169,24 @@ runs:
         github-token: ${{ inputs.github_token }}
         script: |
           const isUpdate = '${{ steps.check-env.outputs.exists }}' === 'true';
+          const status = '${{ steps.poll-status.outputs.status }}';
+
+          let statusEmoji = '🚀';
+          let statusMessage = '';
+
+          if (status === 'error') {
+            statusEmoji = '❌';
+            statusMessage = 'has failed to deploy';
+          } else if (status === 'creating') {
+            statusEmoji = '⏳';
+            statusMessage = 'is still being set up';
+          } else {
+            statusMessage = 'has been deployed and is ready';
+          }
+
           const message = isUpdate
-            ? '🔄 Ephemeral environment updated at: ${{ steps.set-env-vars.outputs.url }}\n\nThe environment has been updated with your latest changes.'
-            : '🚀 Ephemeral environment deployed at: ${{ steps.set-env-vars.outputs.url }}\n\nThis environment will be automatically updated when you push new commits to this PR.';
+            ? `${statusEmoji} Ephemeral environment has been updated at: ${{ steps.set-env-vars.outputs.url }}\n\nStatus: Environment ${statusMessage}.\n\nThe environment has been updated with your latest changes.`
+            : `${statusEmoji} Ephemeral environment ${statusMessage} at: ${{ steps.set-env-vars.outputs.url }}\n\nThis environment will be automatically updated when you push new commits to this PR.`;
 
           github.rest.issues.createComment({
             issue_number: ${{ inputs.pr_number }},

@@ -20,6 +20,10 @@ services:
     restart: unless-stopped
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   kernel:
     platform: linux/amd64
@@ -53,7 +57,7 @@ services:
       - JWT_PRIVATE_KEY=${JWT_PRIVATE_KEY}
       - JWT_PUBLIC_KEY=${JWT_PUBLIC_KEY}
       - JWT_EXP=${JWT_EXP}
-      - MEMORY_LIMIT=2048M
+      - MEMORY_LIMIT=1024M
       - WEATHER_OPENWHEATHER_API_KEY=${WEATHER_OPENWHEATHER_API_KEY}
       - WEATHER_GOOGLE_MAPS_API_KEY=${WEATHER_GOOGLE_MAPS_API_KEY}
       - GOOGLE_DISTANCE_MATRIX_API_KEY=${GOOGLE_DISTANCE_MATRIX_API_KEY}
@@ -87,6 +91,10 @@ services:
         condition: service_healthy
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
 
   kernel-migrations:
     platform: linux/amd64
@@ -119,7 +127,7 @@ services:
       - SECURE=true
       - ALLOWED_DOMAINS=${APP_URL}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=2048M
+      - MEMORY_LIMIT=256M
       - GATEWAY_URL=${GATEWAY_URL}
       - THIRD_PARTY_JWT_PUBLIC_KEY=${CLIENT_SPACE_THIRD_PARTY_JWT_PUBLIC_KEY}
       - THIRD_PARTY_JWT_ISSUER=${CLIENT_SPACE_THIRD_PARTY_JWT_ISSUER}
@@ -137,6 +145,10 @@ services:
       - OTEL_SERVICE_NAME=vertuoza/client-space
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   identity:
     platform: linux/amd64
@@ -161,7 +173,7 @@ services:
       - PHP_SESSION_EXPIRATION=240
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=2048M
+      - MEMORY_LIMIT=256M
       - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
       - GATEWAY_URL=${GATEWAY_URL}
       - INTERNAL_SECRET=${INTERNAL_SECRET}
@@ -182,6 +194,10 @@ services:
         condition: service_healthy
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   identity-migrations:
     platform: linux/amd64
@@ -217,7 +233,7 @@ services:
       - PHP_SESSION_EXPIRATION=240
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=2048M
+      - MEMORY_LIMIT=512M
       - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
       - INTERNAL_SECRET=${INTERNAL_SECRET}
       - XDEBUG_MODE=off
@@ -234,6 +250,10 @@ services:
       - OTEL_SERVICE_NAME=vertuoza/vertuo-auth
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   pdf-builder:
     platform: linux/amd64
@@ -270,6 +290,10 @@ services:
         condition: service_completed_successfully
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   pdf-builder-migrations:
     platform: linux/amd64
@@ -307,7 +331,7 @@ services:
       - PHP_SESSION_EXPIRATION=240
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=2048M
+      - MEMORY_LIMIT=256M
       - EMAIL_BREVO_API_KEY=${EMAIL_BREVO_API_KEY}
       - GATEWAY_URL=${GATEWAY_URL}
       - SENDER_EMAIL=${SENDER_EMAIL}
@@ -331,6 +355,10 @@ services:
         condition: service_healthy
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   work-migrations:
     platform: linux/amd64
@@ -390,6 +418,10 @@ services:
         condition: service_completed_successfully
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   ai-migrations:
     platform: linux/amd64
@@ -447,6 +479,10 @@ services:
       # - pdf-builder
       - client-space
       - identity
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   vertuosoft:
     platform: linux/amd64
@@ -534,6 +570,10 @@ services:
           condition: service_completed_successfully
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
 
   front:
     platform: linux/amd64
@@ -564,6 +604,10 @@ services:
       - gateway
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   planning:
     platform: linux/amd64
@@ -577,6 +621,10 @@ services:
       - gateway
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   # DATABASES
   mysql:
@@ -584,6 +632,15 @@ services:
     restart: always
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 20s
+      timeout: 1s
+      retries: 5
 
   postgres:
     image: postgres:${POSTGRES_VERSION:-15-alpine}
@@ -592,11 +649,15 @@ services:
       - POSTGRES_PASSWORD=vertuoza_password
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U vertuoza -h localhost -p 5432']
-      interval: 10s
+      interval: 20s
+      timeout: 10s
       retries: 5
-      timeout: 5s
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   postgres-db-init:
     image: postgres:${POSTGRES_VERSION:-15-alpine}
@@ -627,6 +688,10 @@ services:
         condition: service_healthy
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
 networks:
   tailscale-subdomain-network:

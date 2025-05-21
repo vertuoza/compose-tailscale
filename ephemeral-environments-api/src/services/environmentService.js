@@ -10,6 +10,69 @@ const {
 } = require('../utils/environmentConfig');
 
 /**
+ * Process environment creation in the background
+ * @param {string} environmentId - Environment ID
+ * @param {string} repositoryName - Repository name
+ * @param {number} prNumber - PR number
+ * @param {Array} services - Array of services with name and image_url
+ * @param {string} environmentType - Environment type (qa or demo)
+ * @param {string} url - Environment URL
+ * @returns {Promise<void>}
+ */
+async function processEnvironmentCreation(environmentId, repositoryName, prNumber, services, environmentType, url) {
+  try {
+    logger.info(`Starting background processing for environment ${environmentId}`);
+
+    // Set up environment with vertuoza-compose
+    const environmentDir = await dockerComposeService.setupPrEnvironment(repositoryName, prNumber, services, environmentType);
+
+    // Start the environment
+    await dockerComposeService.startEnvironment(environmentDir, environmentType);
+
+    // Trigger certificate generation with a delay to ensure Tailscale is ready
+    await setTimeout(10000); // Wait for 10 second delay
+    // Then trigger certificate generation without waiting for it to complete
+    await tailscaleService.triggerCertificateGeneration(url)
+      .catch(err => logger.error(`Error in certificate generation: ${err.message}`));
+
+    // Update environment status to running
+    if (environmentType === 'demo') {
+      await run(
+        'UPDATE environments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        ['running', environmentId]
+      );
+    } else {
+      await run(
+        'UPDATE environments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        ['running', environmentId]
+      );
+    }
+
+    // Log the action
+    await run(
+      'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+      [environmentId, 'create', 'success', `Environment created successfully with ${services.length} services`]
+    );
+
+    logger.info(`Background processing completed for environment ${environmentId}`);
+  } catch (err) {
+    logger.error(`Error in background processing for environment ${environmentId}: ${err.message}`);
+
+    // Update environment status to error
+    await run(
+      'UPDATE environments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      ['error', environmentId]
+    );
+
+    // Log the error
+    await run(
+      'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+      [environmentId, 'create', 'error', err.message]
+    );
+  }
+}
+
+/**
  * Create a new PR environment
  * @param {string} repositoryName - Repository name (optional for demo)
  * @param {number} prNumber - PR number (optional for demo)
@@ -39,51 +102,43 @@ async function createEnvironment(repositoryName, prNumber, services, environment
       return updateEnvironment(repositoryName, prNumber, services);
     }
 
-    // Set up environment with vertuoza-compose
-    const environmentDir = await dockerComposeService.setupPrEnvironment(repositoryName, prNumber, services, environmentType);
-
-    // Start the environment
-    await dockerComposeService.startEnvironment(environmentDir, environmentType);
-
     // Create the URL for the PR environment
     const url = createEnvironmentUrl(environmentId);
 
-    // Trigger certificate generation with a delay to ensure Tailscale is ready
-    await setTimeout(10000); // Wait for 10 second delay
-    // Then trigger certificate generation without waiting for it to complete
-    tailscaleService.triggerCertificateGeneration(url)
-      .catch(err => logger.error(`Error in certificate generation: ${err.message}`));
-
-    // Store environment in database
+    // Store environment in database with 'creating' status
     const servicesData = JSON.stringify(services);
 
     // Insert into database with appropriate values
     if (environmentType === 'demo') {
       await run(
         'INSERT INTO environments (id, services_data, status, url, environment_type) VALUES (?, ?, ?, ?, ?)',
-        [environmentId, servicesData, 'running', url, environmentType]
+        [environmentId, servicesData, 'creating', url, environmentType]
       );
     } else {
       await run(
         'INSERT INTO environments (id, repository_name, services_data, pr_number, status, url, environment_type) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [environmentId, repositoryName, servicesData, prNumber, 'running', url, environmentType]
+        [environmentId, repositoryName, servicesData, prNumber, 'creating', url, environmentType]
       );
     }
 
     // Log the action
     await run(
       'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
-      [environmentId, 'create', 'success', `Environment created successfully with ${services.length} services`]
+      [environmentId, 'create', 'pending', `Environment creation started with ${services.length} services`]
     );
 
-    // Return response with appropriate values
+    // Start background processing
+    processEnvironmentCreation(environmentId, repositoryName, prNumber, services, environmentType, url)
+      .catch(err => logger.error(`Error in background processing: ${err.message}`));
+
+    // Return initial response with 'creating' status
     const response = {
       id: environmentId,
       services: services.map(s => ({
         name: s.name,
         imageUrl: s.image_url
       })),
-      status: 'running',
+      status: 'creating',
       url,
       environmentType
     };
@@ -136,6 +191,69 @@ async function createEnvironment(repositoryName, prNumber, services, environment
 }
 
 /**
+ * Process environment update in the background
+ * @param {string} environmentId - Environment ID
+ * @param {string} repositoryName - Repository name
+ * @param {number} prNumber - PR number
+ * @param {Array} services - Array of services with name and image_url
+ * @param {string} environmentType - Environment type (qa or demo)
+ * @param {string} url - Environment URL
+ * @returns {Promise<void>}
+ */
+async function processEnvironmentUpdate(environmentId, repositoryName, prNumber, services, environmentType, url) {
+  try {
+    logger.info(`Starting background update for environment ${environmentId}`);
+
+    // Set up environment with vertuoza-compose
+    const environmentDir = await dockerComposeService.setupPrEnvironment(repositoryName, prNumber, services, environmentType);
+
+    // Update the environment
+    await dockerComposeService.startEnvironment(environmentDir, environmentType);
+
+    // Trigger certificate generation with a delay to ensure Tailscale is ready
+    await setTimeout(10000); // Wait for 10 second delay
+    // Then trigger certificate generation without waiting for it to complete
+    await tailscaleService.triggerCertificateGeneration(url)
+      .catch(err => logger.error(`Error in certificate generation: ${err.message}`));
+
+    // Update environment status to running
+    if (environmentType === 'demo') {
+      await run(
+        'UPDATE environments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        ['running', environmentId]
+      );
+    } else {
+      await run(
+        'UPDATE environments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        ['running', environmentId]
+      );
+    }
+
+    // Log the action
+    await run(
+      'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+      [environmentId, 'update', 'success', `Environment updated successfully with ${services.length} services`]
+    );
+
+    logger.info(`Background update completed for environment ${environmentId}`);
+  } catch (err) {
+    logger.error(`Error in background update for environment ${environmentId}: ${err.message}`);
+
+    // Update environment status to error
+    await run(
+      'UPDATE environments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      ['error', environmentId]
+    );
+
+    // Log the error
+    await run(
+      'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+      [environmentId, 'update', 'error', err.message]
+    );
+  }
+}
+
+/**
  * Update an existing environment
  * @param {string} repositoryName - Repository name (optional for demo)
  * @param {number} prNumber - PR number (optional for demo)
@@ -176,50 +294,42 @@ async function updateEnvironment(repositoryName, prNumber, services, environment
       return createEnvironment(repositoryName, prNumber, services, environmentType);
     }
 
-    // Set up environment with vertuoza-compose
-    const environmentDir = await dockerComposeService.setupPrEnvironment(repositoryName, prNumber, services, environmentType);
-
-    // Update the environment
-    await dockerComposeService.startEnvironment(environmentDir, environmentType);
-
     // Create the URL for the PR environment
     const url = createEnvironmentUrl(environmentId);
 
-    // Trigger certificate generation with a delay to ensure Tailscale is ready
-    await setTimeout(10000); // Wait for 10 second delay
-    // Then trigger certificate generation without waiting for it to complete
-    tailscaleService.triggerCertificateGeneration(url)
-      .catch(err => logger.error(`Error in certificate generation: ${err.message}`));
-
     const servicesData = JSON.stringify(services);
 
-    // Update database with appropriate values
+    // Update database with 'creating' status
     if (environmentType === 'demo') {
       await run(
         'UPDATE environments SET services_data = ?, status = ?, environment_type = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [servicesData, 'running', environmentType, environmentId]
+        [servicesData, 'creating', environmentType, environmentId]
       );
     } else {
       await run(
         'UPDATE environments SET repository_name = ?, services_data = ?, status = ?, environment_type = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        [repositoryName, servicesData, 'running', environmentType, environmentId]
+        [repositoryName, servicesData, 'creating', environmentType, environmentId]
       );
     }
 
     // Log the action
     await run(
       'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
-      [environmentId, 'update', 'success', `Environment updated successfully with ${services.length} services`]
+      [environmentId, 'update', 'pending', `Environment update started with ${services.length} services`]
     );
 
-    // Return response with appropriate values
+    // Start background processing
+    processEnvironmentUpdate(environmentId, repositoryName, prNumber, services, environmentType, url)
+      .catch(err => logger.error(`Error in background update: ${err.message}`));
+
+    // Return initial response with 'creating' status
     const response = {
       id: environmentId,
       services: services.map(s => ({
         name: s.name,
         imageUrl: s.image_url
       })),
-      status: 'running',
+      status: 'creating',
       url,
       environmentType
     };

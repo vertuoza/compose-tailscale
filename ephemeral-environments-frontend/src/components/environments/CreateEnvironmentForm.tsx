@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createEnvironment, CreateEnvironmentRequest } from '../../services/api';
+import { createEnvironment, pollEnvironmentStatus, CreateEnvironmentRequest, Environment } from '../../services/api';
 import Button from '../common/Button';
 
 interface ServiceInput {
@@ -35,7 +35,9 @@ const CreateEnvironmentForm: React.FC = () => {
     environment_type: 'qa', // Default to QA environment
   });
   const [loading, setLoading] = useState(false);
+  const [creationStatus, setCreationStatus] = useState<'idle' | 'creating' | 'polling' | 'success' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [createdEnvironment, setCreatedEnvironment] = useState<Environment | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -103,13 +105,29 @@ const CreateEnvironmentForm: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      setCreationStatus('creating');
 
-      await createEnvironment(formData);
+      // Create the environment (this will return quickly with status 'creating')
+      const environment = await createEnvironment(formData);
+      setCreatedEnvironment(environment);
 
-      // Navigate to the dashboard on success
-      navigate('/');
+      // Start polling for status updates
+      setCreationStatus('polling');
+      const finalEnvironment = await pollEnvironmentStatus(environment.id);
+      setCreatedEnvironment(finalEnvironment);
+
+      // Check the final status
+      if (finalEnvironment.status === 'running') {
+        setCreationStatus('success');
+        // Navigate to the dashboard on success after a short delay
+        setTimeout(() => navigate('/'), 2000);
+      } else if (finalEnvironment.status === 'error') {
+        setCreationStatus('error');
+        setError(`Environment creation failed: ${finalEnvironment.status}`);
+      }
     } catch (err) {
       console.error('Error creating environment:', err);
+      setCreationStatus('error');
       setError('Failed to create environment. Please try again.');
     } finally {
       setLoading(false);
@@ -123,6 +141,22 @@ const CreateEnvironmentForm: React.FC = () => {
       {error && (
         <div className="mb-4 p-3 bg-red-900 bg-opacity-20 border border-red-800 rounded text-linear-error">
           {error}
+        </div>
+      )}
+
+      {creationStatus === 'success' && (
+        <div className="mb-4 p-3 bg-green-900 bg-opacity-20 border border-green-800 rounded text-green-400">
+          Environment created successfully! Redirecting to dashboard...
+        </div>
+      )}
+
+      {(creationStatus === 'creating' || creationStatus === 'polling') && createdEnvironment && (
+        <div className="mb-4 p-3 bg-blue-900 bg-opacity-20 border border-blue-800 rounded text-blue-400">
+          <p>Creating environment: <strong>{createdEnvironment.id}</strong></p>
+          <p className="mt-2">Status: {creationStatus === 'creating' ? 'Initializing...' : 'Setting up containers...'}</p>
+          {createdEnvironment.url && (
+            <p className="mt-2">URL: <a href={createdEnvironment.url} target="_blank" rel="noopener noreferrer" className="underline">{createdEnvironment.url}</a></p>
+          )}
         </div>
       )}
 
@@ -265,7 +299,7 @@ const CreateEnvironmentForm: React.FC = () => {
             type="submit"
             disabled={loading}
           >
-            {loading ? 'Creating...' : 'Create Environment'}
+            {loading ? (creationStatus === 'polling' ? 'Setting up environment...' : 'Creating...') : 'Create Environment'}
           </Button>
         </div>
       </form>

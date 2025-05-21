@@ -35,9 +35,9 @@ jobs:
           # Use rsync to transfer files, excluding .git and preserving specific directories
           rsync -az --delete --no-times --size-only \
             --exclude='.git/' \
-            --exclude='./data/' \
-            --exclude='./logs/' \
-            --exclude='./state/' \
+            --exclude='data/**' \
+            --exclude='logs/**' \
+            --exclude='state/**' \
             --exclude='*.env' \
             ./ root@$REMOTE_HOST:~/compose-tailscale/
 

@@ -46,6 +46,10 @@
     @apply px-2 py-0.5 text-xs font-medium rounded-full inline-flex items-center gap-1 transition-all duration-200;
   }
 
+  .status-creating {
+    @apply bg-blue-900 bg-opacity-20 text-blue-300 border border-blue-800 border-opacity-50;
+  }
+
   .status-running {
     @apply bg-linear-green bg-opacity-20 text-green-300 border border-green-800 border-opacity-50;
   }
