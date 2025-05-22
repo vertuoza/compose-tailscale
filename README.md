@@ -75,16 +75,30 @@ Key components:
    ```
    **Important**: The repository must be cloned to the root level of your home directory (`~/compose-tailscale`) for the Docker volume mounts to work correctly.
 
-2. Create a `.env` file based on the provided example:
+2. Set up Google Cloud authentication for decrypting environment files:
    ```bash
-   cp .env.example .env
+   gcloud auth login
+   gcloud config set project vertuoza-qa
+   gcloud auth application-default login
    ```
 
-3. Edit the `.env` file to set your Tailscale credentials and other configuration options.
-
-4. Start the services using Docker Compose:
+   If you are already authorized, you can just switch the project context for Default Application Credentials:
    ```bash
-   docker-compose up -d
+   gcloud auth application-default set-quota-project vertuoza-qa
+   ```
+
+3. Decrypt the `.env` files:
+   ```bash
+   make sops-decrypt
+   ```
+
+   This will decrypt both the root `.env` file and the `vertuoza-compose/.env` file.
+
+4. Edit the `.env` files as needed to set your Tailscale credentials and other configuration options.
+
+5. Start the services using the makefile:
+   ```bash
+   make
    ```
 
 3. Configure GitHub Actions in your repositories:
@@ -145,6 +159,48 @@ The system uses Tailscale for networking and routing:
 - GitHub Actions uses Tailscale OAuth to connect to the Ephemeral Environments API Server.
 - The Deploy to Remote Server workflow uses Tailscale for secure SSH connections to the remote server.
 - The remote server should be configured to accept connections from Tailscale nodes with the "tag:github-actions" tag.
+- Environment variables are encrypted using Google Cloud KMS via the `sops` tool before being committed to the repository.
+
+### Environment Variables Encryption
+
+This project uses [sops](https://github.com/mozilla/sops) with Google Cloud KMS to encrypt sensitive environment variables. This allows us to securely store `.env` files in the repository without exposing sensitive information.
+
+#### Prerequisites for Encryption/Decryption
+
+1. Install [sops](https://github.com/mozilla/sops/releases)
+2. Set up Google Cloud authentication:
+   ```bash
+   gcloud auth login
+   gcloud config set project vertuoza-qa
+   gcloud auth application-default login
+   ```
+
+#### Encrypting Environment Variables
+
+If you modify any `.env` file and want to commit the changes, you need to encrypt it first:
+
+```bash
+make sops-encrypt
+```
+
+This will create encrypted `.env.enc` files that can be safely committed to the repository.
+
+#### Decrypting Environment Variables
+
+To decrypt the environment variables:
+
+```bash
+make sops-decrypt
+```
+
+This will decrypt the `.env.enc` files into `.env` files that can be used by the application.
+
+#### Workflow
+
+1. Decrypt the environment variables: `make sops-decrypt`
+2. Make changes to the `.env` files as needed
+3. Encrypt the updated environment variables: `make sops-encrypt`
+4. Commit the encrypted `.env.enc` files to the repository
 
 ## Documentation
 
