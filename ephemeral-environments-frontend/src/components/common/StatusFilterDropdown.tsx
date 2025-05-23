@@ -7,7 +7,7 @@ interface StatusFilterDropdownProps {
 }
 
 const statusOptions = [
-  { value: 'creating', label: 'Creating', color: 'text-yellow-600' },
+  { value: 'creating', label: 'Creating', color: 'text-blue-600' },
   { value: 'running', label: 'Running', color: 'text-green-600' },
   { value: 'error', label: 'Error', color: 'text-red-600' },
   { value: 'removed', label: 'Removed', color: 'text-gray-600' },
@@ -83,40 +83,6 @@ const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = ({
         </svg>
       </button>
 
-      {/* Selected status badges */}
-      {selectedStatuses.length > 0 && (
-        <div className="flex flex-wrap gap-1 mt-2">
-          {selectedStatuses.map(status => {
-            const statusOption = statusOptions.find(option => option.value === status);
-            return (
-              <span
-                key={status}
-                className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-linear-dark-lighter border border-linear-border text-linear-text"
-              >
-                <span className={`w-2 h-2 rounded-full mr-1 ${
-                  status === 'creating' ? 'bg-yellow-500' :
-                  status === 'running' ? 'bg-green-500' :
-                  status === 'error' ? 'bg-red-500' :
-                  'bg-gray-500'
-                }`}></span>
-                {statusOption?.label || status}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleStatusToggle(status);
-                  }}
-                  className="ml-1 text-linear-text-secondary hover:text-linear-text"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </span>
-            );
-          })}
-        </div>
-      )}
-
       {/* Dropdown menu */}
       {isOpen && (
         <div className="absolute top-full left-0 mt-1 w-full min-w-[200px] bg-linear-dark-lighter border border-linear-border rounded-md shadow-lg z-50">
@@ -150,7 +116,7 @@ const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = ({
                   className="mr-2 rounded border-linear-border text-linear-accent focus:ring-linear-accent focus:ring-1"
                 />
                 <span className={`w-2 h-2 rounded-full mr-2 ${
-                  option.value === 'creating' ? 'bg-yellow-500' :
+                  option.value === 'creating' ? 'bg-blue-500' :
                   option.value === 'running' ? 'bg-green-500' :
                   option.value === 'error' ? 'bg-red-500' :
                   'bg-gray-500'

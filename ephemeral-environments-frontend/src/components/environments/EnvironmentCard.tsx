@@ -67,15 +67,6 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
     <div className="card hover:border-linear-border-hover transition-all duration-200 mb-3 group">
       <div className="p-4">
         <div className="flex items-center mb-2">
-          <div className={`flex items-center justify-center mr-3 ${colorClass}`}>
-            <div className="w-4 h-4 flex items-center justify-center">
-              <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="1" y="1" width="12" height="12" rx="2" fill="currentColor" fillOpacity="0.2" />
-                <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeOpacity="0.4" />
-              </svg>
-            </div>
-          </div>
-
           <div className="flex-1 min-w-0">
             <div className="flex items-center">
               <h3 className="text-base font-medium text-linear-text truncate">
