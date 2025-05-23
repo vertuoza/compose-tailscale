@@ -81,6 +81,11 @@ export const createEnvironment = async (data: CreateEnvironmentRequest): Promise
   return response.data;
 };
 
+export const updateEnvironment = async (id: string, data: CreateEnvironmentRequest): Promise<Environment> => {
+  const response = await api.put(`/${id}`, data);
+  return response.data;
+};
+
 /**
  * Poll for environment status until it's no longer 'creating' or max attempts reached
  * @param id Environment ID to poll
