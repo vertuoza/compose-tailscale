@@ -85,12 +85,8 @@ async function configureGoogleCloudAuth(environmentType = 'qa') {
     logger.info(`Wrote Google Cloud credentials to temporary file: ${tempCredentialsPath}`);
 
     // Configure Docker to authenticate with Google Cloud Artifact Registry
-    // Use the appropriate project based on environment type
-    const projectId = environmentType === 'demo' ? 'vertuoza-demo-382712' : 'vertuoza-qa';
-
     await executeCommand(`gcloud auth activate-service-account --key-file=${tempCredentialsPath}`);
     await executeCommand('gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet');
-    await executeCommand(`gcloud config set project ${projectId}`);
 
     logger.info(`Configured Docker authentication with Google Cloud Artifact Registry for ${environmentType} environment`);
   } catch (err) {
@@ -139,6 +135,11 @@ async function startEnvironment(environmentDir, environmentType = 'qa') {
     // Configure GitHub Authentication before starting the environment
     await configureGitHubAuth();
 
+    // Pull the latest images first
+    await executeCommand(`cd ${environmentDir} && docker compose pull`);
+    logger.info(`Pulled latest Docker images for environment at ${environmentDir}`);
+
+    // Then start the environment
     await executeCommand(`cd ${environmentDir} && docker compose up -d`);
     logger.info(`Started Docker Compose environment at ${environmentDir} with ${environmentType} environment`);
   } catch (err) {
@@ -157,7 +158,7 @@ async function stopEnvironment(environmentDir) {
     await executeCommand(`cd ${environmentDir} && docker compose down -v --remove-orphans`);
 
     // Clean up any dangling containers, images, and volumes
-    await executeCommand('docker system prune -f');
+    await executeCommand('docker system prune -af');
 
     logger.info(`Stopped Docker Compose environment at ${environmentDir}`);
   } catch (err) {
