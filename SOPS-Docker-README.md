@@ -14,24 +14,12 @@ A lightweight Docker container for using [SOPS (Secrets OPerationS)](https://git
 ## Building the Image
 
 ```bash
-docker build -f sops.Dockerfile -t sops-gcp .
+docker build -f sops.Dockerfile -t sops .
 ```
 
 ## Authentication Methods
 
-### 1. Service Account Key File (Recommended for CI/CD)
-
-Mount a service account JSON key file and set the environment variable:
-
-```bash
-docker run --rm \
-  -v /path/to/service-account.json:/workspace/sa.json \
-  -v /path/to/encrypted/files:/workspace \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/workspace/sa.json \
-  sops-gcp decrypt encrypted-file.yaml
-```
-
-### 2. Interactive Login
+### 1. Interactive Login
 
 For development and one-time use:
 
@@ -44,27 +32,6 @@ docker run -it sops-gcp bash
 # Then inside container: gcloud auth login
 ```
 
-### 3. Mount Existing Credentials
-
-If you're already authenticated with gcloud on your host:
-
-```bash
-docker run --rm \
-  -v ~/.config/gcloud:/home/sops/.config/gcloud:ro \
-  -v /path/to/files:/workspace \
-  sops-gcp decrypt encrypted-file.yaml
-```
-
-### 4. Application Default Credentials (ADC)
-
-For Google Cloud environments (GKE, Cloud Run, etc.), ADC works automatically:
-
-```bash
-docker run --rm \
-  -v /path/to/files:/workspace \
-  sops-gcp decrypt encrypted-file.yaml
-```
-
 ## Usage Examples
 
 ### Encrypting Files
@@ -74,7 +41,6 @@ docker run --rm \
 docker run --rm \
   -v /path/to/service-account.json:/workspace/sa.json \
   -v /path/to/files:/workspace \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/workspace/sa.json \
   sops-gcp encrypt \
   --gcp-kms projects/PROJECT_ID/locations/LOCATION/keyRings/RING_NAME/cryptoKeys/KEY_NAME \
   secret.yaml
@@ -87,7 +53,6 @@ docker run --rm \
 docker run --rm \
   -v /path/to/service-account.json:/workspace/sa.json \
   -v /path/to/files:/workspace \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/workspace/sa.json \
   sops-gcp decrypt encrypted-secret.yaml
 ```
 
@@ -98,7 +63,6 @@ docker run --rm \
 docker run -it \
   -v /path/to/service-account.json:/workspace/sa.json \
   -v /path/to/files:/workspace \
-  -e GOOGLE_APPLICATION_CREDENTIALS=/workspace/sa.json \
   -e EDITOR=vi \
   sops-gcp edit encrypted-secret.yaml
 ```
@@ -108,13 +72,11 @@ docker run -it \
 ```bash
 # JSON file
 docker run --rm \
-  -v ~/.config/gcloud:/home/sops/.config/gcloud:ro \
   -v /path/to/files:/workspace \
   sops-gcp decrypt secrets.json
 
 # Environment file
 docker run --rm \
-  -v ~/.config/gcloud:/home/sops/.config/gcloud:ro \
   -v /path/to/files:/workspace \
   sops-gcp decrypt .env.encrypted
 ```
