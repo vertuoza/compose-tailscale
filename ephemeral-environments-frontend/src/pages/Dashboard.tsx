@@ -4,20 +4,32 @@ import { getEnvironments, deleteEnvironment, Environment } from '../services/api
 import AppLayout from '../components/layout/AppLayout';
 import EnvironmentList from '../components/environments/EnvironmentList';
 import Button from '../components/common/Button';
+import StatusFilterDropdown from '../components/common/StatusFilterDropdown';
 
 const Dashboard: React.FC = () => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string>('running'); // Default to showing only running environments
+  const [statusFilters, setStatusFilters] = useState<string[]>(['running', 'creating']); // Default to showing running and creating environments
 
   const fetchEnvironments = useCallback(async () => {
     try {
       setLoading(true);
-      // Pass the status filter to the API call if it's not 'all'
+
+      if (statusFilters.length === 0) {
+        // No filters selected, show empty list
+        setEnvironments([]);
+        setError(null);
+        setLoading(false);
+        return;
+      }
+
+      // Use comma-separated status values for efficient single API call
+      const statusParam = statusFilters.join(',');
       const data = await getEnvironments({
-        status: statusFilter !== 'all' ? statusFilter : undefined
+        status: statusParam
       });
+
       setEnvironments(data);
       setError(null);
     } catch (err) {
@@ -26,7 +38,7 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilters]);
 
   useEffect(() => {
     fetchEnvironments();
@@ -59,37 +71,11 @@ const Dashboard: React.FC = () => {
           </div>
 
           <div className="flex space-x-3">
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  // Refresh environments when filter changes
-                  setLoading(true);
-                  getEnvironments({
-                    status: e.target.value !== 'all' ? e.target.value : undefined
-                  }).then(data => {
-                    setEnvironments(data);
-                    setLoading(false);
-                  }).catch(err => {
-                    console.error('Error fetching environments:', err);
-                    setError('Failed to load environments. Please try again.');
-                    setLoading(false);
-                  });
-                }}
-                className="bg-linear-dark-lighter border border-linear-border rounded px-3 pr-8 py-1.5 text-sm text-linear-text focus:outline-none focus:ring-1 focus:ring-linear-accent appearance-none w-full"
-              >
-                <option value="running">Running</option>
-                <option value="error">Error</option>
-                <option value="removed">Removed</option>
-                <option value="all">All</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-linear-text-secondary">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </div>
-            </div>
+            <StatusFilterDropdown
+              selectedStatuses={statusFilters}
+              onStatusChange={setStatusFilters}
+              disabled={loading}
+            />
 
             <Button
               variant="secondary"

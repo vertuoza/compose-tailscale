@@ -173,6 +173,7 @@ router.get('/:id', async (req, res) => {
 /**
  * List all environments
  * GET /api/environments
+ * Supports multiple status filters: ?status=creating,running
  */
 router.get('/', async (req, res) => {
   try {
@@ -182,7 +183,12 @@ router.get('/', async (req, res) => {
     const filters = {};
 
     if (status) {
-      filters.status = status;
+      // Support comma-separated status values
+      if (status.includes(',')) {
+        filters.statuses = status.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      } else {
+        filters.status = status;
+      }
     }
 
     if (repository_name) {
