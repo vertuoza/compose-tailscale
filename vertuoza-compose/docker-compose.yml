@@ -11,7 +11,7 @@ services:
       - TS_STATE_DIR=/var/lib/tailscale
       - TS_USERSPACE=false
     volumes:
-      - ${COMPOSE_PROJECT_ROOT}/vertuoza-compose/config:/config
+      - ${COMPOSE_PROJECT_ROOT:-${PWD}}/vertuoza-compose/config:/config
       - vertuoza-ts-state:/var/lib/tailscale
     devices:
       - /dev/net/tun:/dev/net/tun
