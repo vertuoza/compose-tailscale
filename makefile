@@ -1,5 +1,5 @@
 # SOPS Docker image name
-SOPS_IMAGE = sops
+SOPS_IMAGE = ghcr.io/vertuoza/tools/sops:latest
 
 default: sops-decrypt docker-start
 
