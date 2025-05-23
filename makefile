@@ -1,5 +1,6 @@
 # SOPS Docker image name
 SOPS_IMAGE = ghcr.io/vertuoza/tools/sops:latest
+GCP_KMS = projects/vertuoza-qa/locations/global/keyRings/sops/cryptoKeys/sops-key
 
 default: sops-decrypt docker-start
 
@@ -24,8 +25,8 @@ endef
 # Encrypt .env files using Docker container
 sops-encrypt:
 	@echo "Encrypting .env files using Docker container..."
-	$(call run_sops,encrypt --input-type=binary --output-type=binary .env > .env.enc)
-	$(call run_sops,encrypt --input-type=binary --output-type=binary vertuoza-compose/.env > vertuoza-compose/.env.enc)
+	$(call run_sops,encrypt --input-type=binary --output-type=binary --gcp-kms $(GCP_KMS) .env > .env.enc)
+	$(call run_sops,encrypt --input-type=binary --output-type=binary --gcp-kms $(GCP_KMS) vertuoza-compose/.env > vertuoza-compose/.env.enc)
 	@docker stop sops > /dev/null
 
 # Decrypt .env files using Docker container
