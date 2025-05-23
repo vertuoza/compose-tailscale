@@ -25,7 +25,7 @@ export interface Environment {
   repositoryName?: string;
   services: Service[];
   prNumber?: number;
-  status: 'creating' | 'running' | 'error' | 'removed';
+  status: 'creating' | 'running' | 'error' | 'removed' | 'deleting';
   url: string;
   environmentType: 'qa' | 'demo';
   createdAt: string;
@@ -105,6 +105,36 @@ export const pollEnvironmentStatus = async (
     const environment = await getEnvironment(id);
 
     if (environment.status === 'creating' && attempts < maxAttempts) {
+      return new Promise(resolve => {
+        setTimeout(() => resolve(checkStatus()), interval);
+      });
+    }
+
+    return environment;
+  };
+
+  return checkStatus();
+};
+
+/**
+ * Poll for environment status until it's no longer 'deleting' or max attempts reached
+ * @param id Environment ID to poll
+ * @param interval Polling interval in milliseconds (default: 10000ms = 10s)
+ * @param maxAttempts Maximum number of polling attempts (default: 30 = 5 minutes total with 10s interval)
+ * @returns Promise resolving to the environment when status changes from 'deleting' or max attempts reached
+ */
+export const pollEnvironmentDeletion = async (
+  id: string,
+  interval = 10000,
+  maxAttempts = 24
+): Promise<Environment> => {
+  let attempts = 0;
+
+  const checkStatus = async (): Promise<Environment> => {
+    attempts++;
+    const environment = await getEnvironment(id);
+
+    if (environment.status === 'deleting' && attempts < maxAttempts) {
       return new Promise(resolve => {
         setTimeout(() => resolve(checkStatus()), interval);
       });

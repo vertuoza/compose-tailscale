@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { updateEnvironment, CreateEnvironmentRequest, Environment } from '../../services/api';
+import { updateEnvironment, CreateEnvironmentRequest, Environment, pollEnvironmentStatus } from '../../services/api';
 import Button from '../common/Button';
 
 interface ServiceInput {
@@ -95,9 +95,24 @@ const UpdateEnvironmentForm: React.FC<UpdateEnvironmentFormProps> = ({
       setLoading(true);
       setError(null);
 
-      // Update the environment
+      // Update the environment (this will set status to "creating")
       const updatedEnvironment = await updateEnvironment(environment.id, formData);
+
+      // Immediately call onSuccess to show the "creating" status
       onSuccess(updatedEnvironment);
+
+      // Start polling for update completion
+      pollEnvironmentStatus(environment.id)
+        .then((finalEnvironment) => {
+          // Update completed, trigger final refresh
+          onSuccess(finalEnvironment);
+        })
+        .catch((error) => {
+          console.error('Error during update polling:', error);
+          // Still trigger refresh to show updated status
+          onSuccess(updatedEnvironment);
+        });
+
     } catch (err) {
       console.error('Error updating environment:', err);
       setError('Failed to update environment. Please try again.');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getEnvironment, getEnvironments, deleteEnvironment, Environment, EnvironmentLog, getEnvironmentLogs, pollEnvironmentStatus } from '../services/api';
+import { getEnvironment, getEnvironments, deleteEnvironment, Environment, EnvironmentLog, getEnvironmentLogs, pollEnvironmentStatus, pollEnvironmentDeletion } from '../services/api';
 import AppLayout from '../components/layout/AppLayout';
 import Button from '../components/common/Button';
 import StatusBadge from '../components/common/StatusBadge';
@@ -54,7 +54,7 @@ const EnvironmentDetailPage: React.FC = () => {
       console.log('Starting status polling for environment:', id);
 
       // Use the existing pollEnvironmentStatus function
-      const updatedEnvironment = await pollEnvironmentStatus(id, 10000, 24); // Poll every 10s for max 4 minutes
+      const updatedEnvironment = await pollEnvironmentStatus(id, 20000, 24); // Poll every 10s for max 4 minutes
 
       if (pollingRef.current) {
         setEnvironment(updatedEnvironment);
@@ -133,11 +133,27 @@ const EnvironmentDetailPage: React.FC = () => {
 
     if (window.confirm(`Are you sure you want to delete environment ${environment.id}?`)) {
       try {
+        // Call the delete API which will set status to "deleting"
         await deleteEnvironment(environment.id);
-        navigate('/');
+
+        // Update the environment status to "deleting" immediately
+        setEnvironment({ ...environment, status: 'deleting' });
+
+        // Start polling for deletion completion
+        pollEnvironmentDeletion(environment.id)
+          .then(() => {
+            // Deletion completed, navigate back to dashboard
+            navigate('/');
+          })
+          .catch((error) => {
+            console.error('Error during deletion polling:', error);
+            // Still navigate back on error
+            navigate('/');
+          });
+
       } catch (err) {
-        console.error('Error deleting environment:', err);
-        alert('Failed to delete environment. Please try again.');
+        console.error('Error starting deletion:', err);
+        alert('Failed to start environment deletion. Please try again.');
       }
     }
   };

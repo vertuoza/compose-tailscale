@@ -6,25 +6,6 @@ interface SidebarProps {
   environments: Environment[];
 }
 
-// Function to generate a color based on string
-const stringToColor = (str: string) => {
-  const colors = [
-    'linear-blue',
-    'linear-purple',
-    'linear-green',
-    'linear-yellow',
-    'linear-orange',
-    'linear-red',
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  return colors[Math.abs(hash) % colors.length];
-};
-
 const Sidebar: React.FC<SidebarProps> = ({ environments }) => {
   const location = useLocation();
 
@@ -85,28 +66,17 @@ const Sidebar: React.FC<SidebarProps> = ({ environments }) => {
         </div>
 
         <div className="px-2">
-          {Object.entries(serviceGroups).map(([serviceName, envs]) => {
-            const colorClass = `text-${stringToColor(serviceName)}`;
-            return (
+          {Object.entries(serviceGroups).map(([serviceName, envs]) => (
               <div key={serviceName} className="mb-1">
                 <Link
                   to={`/service/${serviceName}`}
                   className={`sidebar-item ${location.pathname === `/service/${serviceName}` ? 'active' : ''}`}
                 >
-                  <div className="flex items-center justify-center mr-2">
-                    <div className={`w-3.5 h-3.5 flex items-center justify-center ${colorClass}`}>
-                      <svg viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="1" y="1" width="12" height="12" rx="2" fill="currentColor" fillOpacity="0.2" />
-                        <rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" strokeOpacity="0.4" />
-                      </svg>
-                    </div>
-                  </div>
                   <span className="truncate">{serviceName}</span>
                   <span className="ml-auto text-xs opacity-60">{envs.length}</span>
                 </Link>
               </div>
-            );
-          })}
+            ))}
         </div>
       </div>
 
