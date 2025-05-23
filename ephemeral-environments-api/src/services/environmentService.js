@@ -503,9 +503,16 @@ async function listEnvironments(filters = {}) {
     if (Object.keys(filters).length > 0) {
       query += ' WHERE';
 
+      // Handle single status filter (backward compatibility)
       if (filters.status) {
         query += ' status = ?';
         params.push(filters.status);
+      }
+      // Handle multiple statuses filter
+      else if (filters.statuses && Array.isArray(filters.statuses) && filters.statuses.length > 0) {
+        const placeholders = filters.statuses.map(() => '?').join(',');
+        query += ` status IN (${placeholders})`;
+        params.push(...filters.statuses);
       }
 
       if (filters.prNumber) {
