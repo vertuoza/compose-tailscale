@@ -31,27 +31,29 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
   };
 
   const handleDelete = async () => {
-    try {
-      // Call the delete API which will set status to "deleting"
-      await deleteEnvironment(id);
+    if (window.confirm(`Are you sure you want to delete environment ${id}?`)) {
+      try {
+        // Call the delete API which will set status to "deleting"
+        await deleteEnvironment(id);
 
-      // Start polling for deletion completion
-      pollEnvironmentDeletion(id)
-        .then(() => {
-          // Deletion completed, trigger refresh
-          onDelete(id);
-        })
-        .catch((error) => {
-          console.error('Error during deletion polling:', error);
-          // Still trigger refresh to show updated status
-          onDelete(id);
-        });
+        // Start polling for deletion completion
+        pollEnvironmentDeletion(id)
+          .then(() => {
+            // Deletion completed, trigger refresh
+            onDelete(id);
+          })
+          .catch((error) => {
+            console.error('Error during deletion polling:', error);
+            // Still trigger refresh to show updated status
+            onDelete(id);
+          });
 
-      // Immediately trigger refresh to show "deleting" status
-      onDelete(id);
-    } catch (error) {
-      console.error('Error starting deletion:', error);
-      alert('Failed to start environment deletion. Please try again.');
+        // Immediately trigger refresh to show "deleting" status
+        onDelete(id);
+      } catch (error) {
+        console.error('Error starting deletion:', error);
+        alert('Failed to start environment deletion. Please try again.');
+      }
     }
   };
 
