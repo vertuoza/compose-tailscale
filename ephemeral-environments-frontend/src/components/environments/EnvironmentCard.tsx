@@ -1,6 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
-import { Environment } from '../../services/api';
+import { useNavigate } from 'react-router-dom';
+import { Environment, deleteEnvironment, pollEnvironmentDeletion } from '../../services/api';
 import StatusBadge from '../common/StatusBadge';
 import Button from '../common/Button';
 
@@ -10,39 +10,48 @@ interface EnvironmentCardProps {
   onViewLogs: (id: string) => void;
 }
 
-// Function to generate a color based on repository name
-const repoToColor = (repo: string) => {
-  const colors = [
-    'linear-blue',
-    'linear-purple',
-    'linear-green',
-    'linear-yellow',
-    'linear-orange',
-    'linear-red',
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < repo.length; i++) {
-    hash = repo.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  return colors[Math.abs(hash) % colors.length];
-};
-
 const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
   environment,
   onDelete,
   onViewLogs,
 }) => {
+  const navigate = useNavigate();
   const { id, repositoryName, prNumber, status, url, createdAt, environmentType = 'qa' } = environment;
-  // For DEMO environments, use a default color
-  const colorClass = repositoryName
-    ? `text-${repoToColor(repositoryName)}`
-    : 'text-linear-purple';
 
-  const handleDelete = () => {
-    if (window.confirm(`Are you sure you want to delete environment ${id}?`)) {
+  const handleCardClick = () => {
+    navigate(`/environment/${id}`);
+  };
+
+  const handleUrlClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+
+  const handleDelete = async () => {
+    try {
+      // Call the delete API which will set status to "deleting"
+      await deleteEnvironment(id);
+
+      // Start polling for deletion completion
+      pollEnvironmentDeletion(id)
+        .then(() => {
+          // Deletion completed, trigger refresh
+          onDelete(id);
+        })
+        .catch((error) => {
+          console.error('Error during deletion polling:', error);
+          // Still trigger refresh to show updated status
+          onDelete(id);
+        });
+
+      // Immediately trigger refresh to show "deleting" status
       onDelete(id);
+    } catch (error) {
+      console.error('Error starting deletion:', error);
+      alert('Failed to start environment deletion. Please try again.');
     }
   };
 
@@ -64,15 +73,24 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
   };
 
   return (
-    <div className="card hover:border-linear-border-hover transition-all duration-200 mb-3 group">
+    <div
+      className="card hover:border-linear-border-hover transition-all duration-200 mb-3 group cursor-pointer"
+      onClick={handleCardClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleCardClick();
+        }
+      }}
+    >
       <div className="p-4">
         <div className="flex items-center mb-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center">
               <h3 className="text-base font-medium text-linear-text truncate">
-                <Link to={`/environment/${id}`} className="hover:text-linear-accent">
-                  {repositoryName || `Demo Environment ${id.split('-')[1]}`}
-                </Link>
+                {repositoryName || `Demo Environment ${id.split('-')[1]}`}
               </h3>
               <div className="ml-2 flex-shrink-0">
                 <StatusBadge status={status} />
@@ -102,6 +120,7 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
               target="_blank"
               rel="noopener noreferrer"
               className="text-linear-accent hover:underline truncate block"
+              onClick={handleUrlClick}
             >
               {url}
             </a>
@@ -114,27 +133,32 @@ const EnvironmentCard: React.FC<EnvironmentCardProps> = ({
           </div>
 
           <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => onViewLogs(id)}
-            >
-              <svg className="w-3.5 h-3.5 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Logs
-            </Button>
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={handleDelete}
-            >
-              <svg className="w-3.5 h-3.5 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 6H5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Delete
-            </Button>
+            <div onClick={handleButtonClick}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onViewLogs(id)}
+              >
+                <svg className="w-3.5 h-3.5 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Logs
+              </Button>
+            </div>
+            <div onClick={handleButtonClick}>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleDelete}
+                disabled={status === 'deleting' || status === 'creating'}
+              >
+                <svg className="w-3.5 h-3.5 mr-1" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 6H5H21" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {status === 'deleting' ? 'Deleting...' : 'Delete'}
+              </Button>
+            </div>
           </div>
         </div>
       </div>

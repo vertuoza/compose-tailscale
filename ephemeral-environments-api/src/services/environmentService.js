@@ -382,19 +382,13 @@ async function updateEnvironment(repositoryName, prNumber, services, environment
 }
 
 /**
- * Remove an environment
+ * Process environment deletion in the background
  * @param {string} environmentId - Environment ID
- * @returns {Promise<Object>} - Result
+ * @returns {Promise<void>}
  */
-async function removeEnvironment(environmentId) {
+async function processEnvironmentDeletion(environmentId) {
   try {
-
-    // Check if environment exists
-    const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
-
-    if (!existingEnv) {
-      throw new Error(`Environment ${environmentId} not found`);
-    }
+    logger.info(`Starting background deletion for environment ${environmentId}`);
 
     // Get the environment directory
     const environmentDir = getEnvironmentDir(environmentId);
@@ -405,7 +399,10 @@ async function removeEnvironment(environmentId) {
     // Remove the Tailscale machine
     await tailscaleService.removeTailscaleMachine(environmentId);
 
-    // Update environment status in database
+    // Clean up environment directory
+    await dockerComposeService.cleanupEnvironment(environmentDir);
+
+    // Update environment status to removed
     await run(
       'UPDATE environments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
       ['removed', environmentId]
@@ -417,14 +414,59 @@ async function removeEnvironment(environmentId) {
       [environmentId, 'remove', 'success', 'Environment removed successfully']
     );
 
-    // Clean up environment directory
-    await dockerComposeService.cleanupEnvironment(environmentDir);
+    logger.info(`Background deletion completed for environment ${environmentId}`);
+  } catch (err) {
+    logger.error(`Error in background deletion for environment ${environmentId}: ${err.message}`);
 
-    // Create simple response object
+    // Update environment status to error
+    await run(
+      'UPDATE environments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      ['error', environmentId]
+    );
+
+    // Log the error
+    await run(
+      'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+      [environmentId, 'remove', 'error', err.message]
+    );
+  }
+}
+
+/**
+ * Remove an environment
+ * @param {string} environmentId - Environment ID
+ * @returns {Promise<Object>} - Result
+ */
+async function removeEnvironment(environmentId) {
+  try {
+    // Check if environment exists
+    const existingEnv = await get('SELECT * FROM environments WHERE id = ?', [environmentId]);
+
+    if (!existingEnv) {
+      throw new Error(`Environment ${environmentId} not found`);
+    }
+
+    // Update environment status to deleting immediately
+    await run(
+      'UPDATE environments SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+      ['deleting', environmentId]
+    );
+
+    // Log the action
+    await run(
+      'INSERT INTO environment_logs (environment_id, action, status, message) VALUES (?, ?, ?, ?)',
+      [environmentId, 'remove', 'pending', 'Environment deletion started']
+    );
+
+    // Start background processing
+    processEnvironmentDeletion(environmentId)
+      .catch(err => logger.error(`Error in background deletion: ${err.message}`));
+
+    // Return initial response with 'deleting' status
     const response = {
       id: environmentId,
-      status: 'removed',
-      message: 'Environment removed successfully'
+      status: 'deleting',
+      message: 'Environment deletion started'
     };
 
     return response;

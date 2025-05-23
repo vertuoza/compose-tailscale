@@ -11,6 +11,7 @@ const statusOptions = [
   { value: 'running', label: 'Running', color: 'text-green-600' },
   { value: 'error', label: 'Error', color: 'text-red-600' },
   { value: 'removed', label: 'Removed', color: 'text-gray-600' },
+  { value: 'deleting', label: 'Deleting', color: 'text-orange-600' },
 ];
 
 const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = ({
@@ -119,6 +120,7 @@ const StatusFilterDropdown: React.FC<StatusFilterDropdownProps> = ({
                   option.value === 'creating' ? 'bg-blue-500' :
                   option.value === 'running' ? 'bg-green-500' :
                   option.value === 'error' ? 'bg-red-500' :
+                  option.value === 'deleting' ? 'bg-orange-500' :
                   'bg-gray-500'
                 }`}></span>
                 <span className="text-sm text-linear-text">{option.label}</span>

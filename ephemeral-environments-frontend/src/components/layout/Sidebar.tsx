@@ -6,25 +6,6 @@ interface SidebarProps {
   environments: Environment[];
 }
 
-// Function to generate a color based on string
-const stringToColor = (str: string) => {
-  const colors = [
-    'linear-blue',
-    'linear-purple',
-    'linear-green',
-    'linear-yellow',
-    'linear-orange',
-    'linear-red',
-  ];
-
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  return colors[Math.abs(hash) % colors.length];
-};
-
 const Sidebar: React.FC<SidebarProps> = ({ environments }) => {
   const location = useLocation();
 
@@ -85,9 +66,7 @@ const Sidebar: React.FC<SidebarProps> = ({ environments }) => {
         </div>
 
         <div className="px-2">
-          {Object.entries(serviceGroups).map(([serviceName, envs]) => {
-            const colorClass = `text-${stringToColor(serviceName)}`;
-            return (
+          {Object.entries(serviceGroups).map(([serviceName, envs]) => (
               <div key={serviceName} className="mb-1">
                 <Link
                   to={`/service/${serviceName}`}
@@ -97,8 +76,7 @@ const Sidebar: React.FC<SidebarProps> = ({ environments }) => {
                   <span className="ml-auto text-xs opacity-60">{envs.length}</span>
                 </Link>
               </div>
-            );
-          })}
+            ))}
         </div>
       </div>
 

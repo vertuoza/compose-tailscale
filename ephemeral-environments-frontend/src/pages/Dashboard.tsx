@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { getEnvironments, deleteEnvironment, Environment } from '../services/api';
+import { getEnvironments, Environment } from '../services/api';
 import AppLayout from '../components/layout/AppLayout';
 import EnvironmentList from '../components/environments/EnvironmentList';
 import Button from '../components/common/Button';
@@ -10,7 +10,7 @@ const Dashboard: React.FC = () => {
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilters, setStatusFilters] = useState<string[]>(['running', 'creating']); // Default to showing running and creating environments
+  const [statusFilters, setStatusFilters] = useState<string[]>(['running', 'creating', 'deleting']); // Default to showing running, creating, and deleting environments
 
   const fetchEnvironments = useCallback(async () => {
     try {
@@ -45,14 +45,9 @@ const Dashboard: React.FC = () => {
   }, [fetchEnvironments]);
 
   const handleDelete = async (id: string) => {
-    try {
-      await deleteEnvironment(id);
-      // Refresh the list after deletion
-      fetchEnvironments();
-    } catch (err) {
-      console.error('Error deleting environment:', err);
-      alert('Failed to delete environment. Please try again.');
-    }
+    // Just refresh the environments list to show updated status
+    // The actual deletion is handled by the EnvironmentCard component
+    fetchEnvironments();
   };
 
   return (

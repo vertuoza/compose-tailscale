@@ -54,7 +54,7 @@ const EnvironmentDetailPage: React.FC = () => {
       console.log('Starting status polling for environment:', id);
 
       // Use the existing pollEnvironmentStatus function
-      const updatedEnvironment = await pollEnvironmentStatus(id, 10000, 24); // Poll every 10s for max 4 minutes
+      const updatedEnvironment = await pollEnvironmentStatus(id, 20000, 24); // Poll every 10s for max 4 minutes
 
       if (pollingRef.current) {
         setEnvironment(updatedEnvironment);
