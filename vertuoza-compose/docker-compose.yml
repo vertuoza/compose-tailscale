@@ -638,7 +638,7 @@ services:
         limits:
           memory: 1024M
     healthcheck:
-      test: ["CMD", "mysql", "-h", "localhost", "-u", "kernel", "-p", "kernel_password", "-e", "SELECT 1 FROM information_schema.tables WHERE table_schema='vertuoza_dvp' LIMIT 1;"]
+      test: ["CMD", "mysql", "-h", "localhost", "-u", "kernel", "-pkernel_password", "-e", "SELECT 1 FROM information_schema.tables WHERE table_schema='vertuoza_dvp' LIMIT 1;"]
       interval: 20s
       timeout: 10s
       retries: 5
