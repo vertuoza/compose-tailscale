@@ -20,7 +20,7 @@ services:
     networks:
       - ephemeral-environments-network
 
-  mysql:
+  ephemeral-environments-mysql:
     image: mysql:8.0
     container_name: ephemeral-environments-mysql
     restart: unless-stopped
@@ -62,7 +62,7 @@ services:
       - TAILSCALE_CLIENT_ID=${TAILSCALE_CLIENT_ID}
       - TAILSCALE_CLIENT_SECRET=${TAILSCALE_CLIENT_SECRET}
       - COMPOSE_PROJECT_ROOT=${PWD}
-      - MYSQL_HOST=mysql
+      - MYSQL_HOST=ephemeral-environments-mysql
       - MYSQL_PORT=3306
       - MYSQL_DATABASE=${MYSQL_DATABASE:-ephemeral_environments}
       - MYSQL_USER=${MYSQL_USER:-prenvuser}
@@ -81,7 +81,7 @@ services:
     depends_on:
       tailscale:
         condition: service_started
-      mysql:
+      ephemeral-environments-mysql:
         condition: service_healthy
 
   ephemeral-environments-frontend:
