@@ -155,10 +155,11 @@ async function startEnvironment(environmentDir, environmentType = 'qa') {
  */
 async function stopEnvironment(environmentDir) {
   try {
+    // Stop and remove containers, networks, and volumes for this environment
     await executeCommand(`cd ${environmentDir} && docker compose down -v --remove-orphans`);
 
-    // Clean up any dangling containers, images, and volumes
-    await executeCommand('docker system prune -af');
+    // Clean up only dangling images (conservative approach)
+    await executeCommand('docker image prune -f');
 
     logger.info(`Stopped Docker Compose environment at ${environmentDir}`);
   } catch (err) {
