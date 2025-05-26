@@ -158,9 +158,6 @@ async function stopEnvironment(environmentDir) {
     // Stop and remove containers, networks, and volumes for this environment
     await executeCommand(`cd ${environmentDir} && docker compose down -v --remove-orphans`);
 
-    // Clean up only dangling images (conservative approach)
-    await executeCommand('docker image prune -f');
-
     logger.info(`Stopped Docker Compose environment at ${environmentDir}`);
   } catch (err) {
     logger.error(`Error stopping Docker Compose environment: ${err.message}`);
