@@ -694,6 +694,156 @@ services:
         limits:
           memory: 256M
 
+  electronic_invoicing:
+    image: ghcr.io/vertuoza/vertuo-backend-php/services/electronic-invoicing:${ELECTRONIC_INVOICING_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - APP_ENV=local
+      - APP_BASE_DOMAIN=tailscale-subdomain-nathan.tailf31c84.ts.net
+      - PORT=80
+      - MODE=DEVELOPMENT
+      - LOG_ENABLED=true
+      - LOG_LEVEL=debug
+      - SECURE=false
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - SANDBOX_ACTIVE=true
+      - MEMORY_LIMIT=256M
+      - GATEWAY_URL=${GATEWAY_URL}
+      - SERVICE_URL=${ELECTRONIC_INVOICING_HOST}
+      - KERNEL_URL=${KERNEL_URL}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=electronic-invoicing
+      - DB_USERNAME=einvoicing
+      - DB_PASSWORD=einvoicing_password
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
+      - GCP_BUCKET_CREDENTIALS=${GCP_BUCKET_CREDENTIALS}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION:-europe-west1}
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      # Switch for using the OpenTelemetry SDK.
+      # You can override all settings using the .env file.
+      - OTEL_PHP_AUTOLOAD_ENABLED=${OTEL_PHP_AUTOLOAD_ENABLED:-false}
+      - OTEL_PHP_FIBERS_ENABLED=${OTEL_PHP_FIBERS_ENABLED:-false}
+      - OTEL_PHP_DISABLED_INSTRUMENTATIONS=${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-all}
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
+      # Type of exporter used by OpenTelemetry SDK.
+      # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#exporter-selection
+      # Default for development: console.
+      # Default for production: otlp.
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      # OpenTelemetry Collector URL.
+      # You can use http://host.docker.internal:4317 if you have a running OpenTelemetry collector locally.
+      # Can be empty if you don't use "otlp" exporter.
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      # OpenTelemetry Collector protocol.
+      - OTEL_EXPORTER_OTLP_PROTOCOL=${OTEL_EXPORTER_OTLP_PROTOCOL:-grpc}
+      # Service name reported in OpenTelemetry traces.
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-vertuoza/electronic-invoicing}
+      # Flowin API Configuration
+      - FLOWIN_API_URL=${FLOWIN_API_URL:-https://api.ibanity.com/einvoicing}
+      - FLOWIN_CLIENT_ID=${FLOWIN_CLIENT_ID:-}
+      - FLOWIN_CLIENT_SECRET=${FLOWIN_CLIENT_SECRET:-}
+      - FLOWIN_CERTIFICATE_PATH=${FLOWIN_CERTIFICATE_PATH:-}
+      - FLOWIN_PRIVATE_KEY_PATH=${FLOWIN_PRIVATE_KEY_PATH:-}
+      - FLOWIN_PRIVATE_KEY_PASSPHRASE=${FLOWIN_PRIVATE_KEY_PASSPHRASE:-}
+      # Iopole API Configuration
+      - IOPOLE_API_URL=${IOPOLE_API_URL:-https://api.ppd.iopole.fr}
+      - IOPOLE_AUTH_URL=${IOPOLE_AUTH_URL:-https://auth.ppd.iopole.fr}
+      - IOPOLE_CLIENT_ID=${IOPOLE_CLIENT_ID:-}
+      - IOPOLE_CLIENT_SECRET=${IOPOLE_CLIENT_SECRET:-}
+    networks:
+      - tailscale-subdomain-network
+
+  electronic_invoicing_migrations:
+    image: ghcr.io/vertuoza/vertuo-backend-php/services/electronic-invoicing-migrations:latest
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=electronic-invoicing
+      - DB_USERNAME=einvoicing
+      - DB_PASSWORD=einvoicing_password
+      - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
+    networks:
+      - tailscale-subdomain-network
+
+  ai-php:
+    image: ghcr.io/vertuoza/vertuo-backend-php/services/vertuo-ai-php:${VERTUO_AI_PHP_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - APP_ENV=local
+      - APP_BASE_DOMAIN=tailscale-subdomain-nathan.tailf31c84.ts.net
+      - APP_URL=${APP_URL}
+      - HASH_SECRET=${HASH_SECRET}
+      - PORT=80
+      - MODE=DEVELOPMENT
+      - LOG_ENABLED=true
+      - LOG_LEVEL=debug
+      - SECURE=false
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - SANDBOX_ACTIVE=true
+      - MEMORY_LIMIT=256M
+      - GATEWAY_URL=${GATEWAY_URL}
+      - GATEWAY_URL_HTTP=${GATEWAY_URL_HTTP}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=vertuo-ai
+      - DB_USERNAME=vertuo-ai
+      - DB_PASSWORD=vertuo-ai_password
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - EXTERNAL_SECRET=${EXTERNAL_SECRET}
+      - XDEBUG_MODE=${XDEBUG_MODE:-on}
+      # Switch for using the OpenTelemetry SDK.
+      # You can override all settings using the .env file.
+      - OTEL_PHP_AUTOLOAD_ENABLED=${OTEL_PHP_AUTOLOAD_ENABLED:-false}
+      - OTEL_PHP_FIBERS_ENABLED=${OTEL_PHP_FIBERS_ENABLED:-false}
+      - OTEL_PHP_DISABLED_INSTRUMENTATIONS=${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-all}
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
+      # Type of exporter used by OpenTelemetry SDK.
+      # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#exporter-selection
+      # Default for development: console.
+      # Default for production: otlp.
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      # OpenTelemetry Collector URL.
+      # You can use http://host.docker.internal:4317 if you have a running OpenTelemetry collector locally.
+      # Can be empty if you don't use "otlp" exporter.
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      # OpenTelemetry Collector protocol.
+      - OTEL_EXPORTER_OTLP_PROTOCOL=${OTEL_EXPORTER_OTLP_PROTOCOL:-grpc}
+      # Service name reported in OpenTelemetry traces.
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-vertuoza/vertuo-ai}
+      # GCP
+      - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX:-development/bucket}
+      - GCP_BUCKET_CREDENTIALS=${GCP_CREDENTIALS:-}
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION:-europe-west1}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GCP_CREDENTIALS:-}
+      # OpenAI
+      - OPEN_AI_SECRET=${OPEN_AI_SECRET:-}
+      - OPEN_AI_OFFER_EXAMPLE_FILES_URL=${OPEN_AI_OFFER_EXAMPLE_FILES_URL:-["https://storage.googleapis.com/vertuoza-testing/tonioai/prompt/example1.json","https://storage.googleapis.com/vertuoza-testing/tonioai/prompt/example2.json","https://storage.googleapis.com/vertuoza-testing/tonioai/prompt/example3.json"]}
+      - OPEN_AI_OFFER_PROMPT_URL=${OPEN_AI_OFFER_PROMPT_URL:-https://storage.googleapis.com/vertuoza-testing/tonioai/prompt/prompt.txt}
+    networks:
+      - tailscale-subdomain-network
+
+  ai-php-migrations:
+    image: ghcr.io/vertuoza/vertuo-backend-php/services/vertuo-ai-php-migrations:latest
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=vertuo-ai
+      - DB_USERNAME=vertuo-ai
+      - DB_PASSWORD=vertuo-ai_password
+      - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
+    networks:
+      - tailscale-subdomain-network
+
 networks:
   tailscale-subdomain-network:
     name: "tailscale-subdomain-network"
