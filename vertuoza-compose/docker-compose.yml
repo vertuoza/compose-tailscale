@@ -477,9 +477,11 @@ services:
       - kernel
       - work
       - ai
-      # - pdf-builder
+      - pdf-builder
       - client-space
       - identity
+      - electronic-invoicing
+      - ai-php
     deploy:
       resources:
         limits:
@@ -638,10 +640,11 @@ services:
         limits:
           memory: 1024M
     healthcheck:
-      test: ["CMD", "mysql", "-h", "localhost", "-u", "kernel", "-pkernel_password", "-e", "SELECT 1 FROM information_schema.tables WHERE table_schema='vertuoza_dvp' LIMIT 1;"]
-      interval: 20s
+      test: ["CMD", "sh", "-c", "MYSQL_PWD=kernel_password mysqladmin ping -h localhost -u kernel --silent"]
+      interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 30s
 
   postgres:
     image: postgres:${POSTGRES_VERSION:-15-alpine}
@@ -694,7 +697,7 @@ services:
         limits:
           memory: 256M
 
-  electronic_invoicing:
+  electronic-invoicing:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/electronic-invoicing:${ELECTRONIC_INVOICING_VERSION:-latest}
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -758,8 +761,11 @@ services:
       - IOPOLE_CLIENT_SECRET=${IOPOLE_CLIENT_SECRET:-}
     networks:
       - tailscale-subdomain-network
+    depends_on:
+      electronic-invoicing-migrations:
+          condition: service_completed_successfully
 
-  electronic_invoicing_migrations:
+  electronic-invoicing-migrations:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/electronic-invoicing-migrations:latest
     environment:
       - DB_HOST=mysql
@@ -770,6 +776,9 @@ services:
       - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
     networks:
       - tailscale-subdomain-network
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   ai-php:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/vertuo-ai-php:${VERTUO_AI_PHP_VERSION:-latest}
@@ -831,6 +840,9 @@ services:
       - OPEN_AI_OFFER_PROMPT_URL=${OPEN_AI_OFFER_PROMPT_URL:-https://storage.googleapis.com/vertuoza-testing/tonioai/prompt/prompt.txt}
     networks:
       - tailscale-subdomain-network
+    depends_on:
+      ai-php-migrations:
+          condition: service_completed_successfully
 
   ai-php-migrations:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/vertuo-ai-php-migrations:latest
@@ -843,6 +855,9 @@ services:
       - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
     networks:
       - tailscale-subdomain-network
+    depends_on:
+      mysql:
+        condition: service_healthy
 
 networks:
   tailscale-subdomain-network:

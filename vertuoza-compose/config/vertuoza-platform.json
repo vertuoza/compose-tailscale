@@ -28,7 +28,7 @@
           "StripPrefix": true
         },
         "/ai/": {
-          "Proxy": "http://ai:4001",
+          "Proxy": "http://ai:4000",
           "StripPrefix": true
         },
         "/ai-php/": {
