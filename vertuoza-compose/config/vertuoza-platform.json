@@ -28,7 +28,11 @@
           "StripPrefix": true
         },
         "/ai/": {
-          "Proxy": "http://ai:4001",
+          "Proxy": "http://ai:4000",
+          "StripPrefix": true
+        },
+        "/ai-php/": {
+          "Proxy": "http://ai-php",
           "StripPrefix": true
         },
         "/gateway/": {
@@ -41,6 +45,10 @@
         },
         "/plannings/": {
           "Proxy": "http://planning",
+          "StripPrefix": true
+        },
+        "/electronic-invoicing/": {
+          "Proxy": "http://electronic-invoicing",
           "StripPrefix": true
         },
         "/": {
