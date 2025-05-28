@@ -640,11 +640,10 @@ services:
         limits:
           memory: 1024M
     healthcheck:
-      test: ["CMD", "sh", "-c", "MYSQL_PWD=kernel_password mysqladmin ping -h localhost -u kernel --silent"]
-      interval: 30s
+      test: ["CMD", "mysql", "-h", "localhost", "-u", "kernel", "-pkernel_password", "-e", "SELECT 1 FROM information_schema.tables WHERE table_schema='vertuoza_dvp' LIMIT 1;"]
+      interval: 20s
       timeout: 10s
       retries: 5
-      start_period: 30s
 
   postgres:
     image: postgres:${POSTGRES_VERSION:-15-alpine}
