@@ -455,7 +455,8 @@ services:
 
   gateway:
     platform: linux/amd64
-    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/api-gateway:fe94968-20250424201304
+    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/api-gateway:latest
+    # image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/api-gateway:fe94968-20250424201304
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
