@@ -6,7 +6,12 @@
 set -e
 
 CONTAINER_NAME="tailscale-subdomain-ts"
-ENV_FILE="vertuoza-compose/.env"
+# Detect if we're in the vertuoza-compose directory or parent directory
+if [ -f ".env" ] && [ -f "docker-compose.yml" ]; then
+    ENV_FILE=".env"
+else
+    ENV_FILE="vertuoza-compose/.env"
+fi
 MAX_WAIT_TIME=60
 WAIT_INTERVAL=2
 
