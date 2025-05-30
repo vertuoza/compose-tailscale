@@ -13,7 +13,7 @@ define run_sops
 	else \
 		echo "Running 'sops' image..."; \
 		docker run \
-			-v .:/workspace \
+			-v ..:/workspace \
 			-w /workspace \
 			--name=sops \
 			-it $(SOPS_IMAGE) auth; \
@@ -26,15 +26,12 @@ endef
 sops-encrypt:
 	@echo "Encrypting .env files using Docker container..."
 	$(call run_sops,encrypt --input-type=binary --output-type=binary --gcp-kms $(GCP_KMS) .env > .env.enc)
-	$(call run_sops,encrypt --input-type=binary --output-type=binary --gcp-kms $(GCP_KMS) vertuoza-compose/.env > vertuoza-compose/.env.enc)
 	@docker stop sops > /dev/null
 
 # Decrypt .env files using Docker container
 sops-decrypt:
 	@echo "Decrypting .env files using Docker container..."
-	@OUTPUT=$${OUTPUT:-.env}
-	$(call run_sops,decrypt --input-type=binary --output-type=binary .env.enc > $$OUTPUT)
-	$(call run_sops,decrypt --input-type=binary --output-type=binary vertuoza-compose/.env.enc > vertuoza-compose/$$OUTPUT)
+	$(call run_sops,decrypt --input-type=binary --output-type=binary .env.enc > .env)
 	@docker stop sops > /dev/null
 
 docker-start:
@@ -47,7 +44,7 @@ docker-stop:
 
 # Update Tailscale IP in .env file
 update-tailscale-ip:
-	@./scripts/update-tailscale-ip.sh
+	@../scripts/update-tailscale-ip.sh
 
 # Help target
 help:
@@ -63,5 +60,6 @@ help:
 	@echo ""
 	@echo "Note: SOPS commands will use existing 'sops' container if available,"
 	@echo "      otherwise will run the 'sops' image from registry."
+	@echo "      This Makefile is designed to work from the vertuoza-compose/ directory."
 
 .PHONY: default down sops-encrypt sops-decrypt docker-start docker-stop update-tailscale-ip help
