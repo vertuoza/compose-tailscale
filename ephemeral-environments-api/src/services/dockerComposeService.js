@@ -136,11 +136,7 @@ async function startEnvironment(environmentDir, environmentType = 'qa') {
     await configureGitHubAuth();
 
     // Pull the latest images first
-    await executeCommand(`cd ${environmentDir} && docker compose pull`);
-    logger.info(`Pulled latest Docker images for environment at ${environmentDir}`);
-
-    // Then start the environment
-    await executeCommand(`cd ${environmentDir} && docker compose up -d`);
+    await executeCommand(`cd ${environmentDir} && make docker-start`);
     logger.info(`Started Docker Compose environment at ${environmentDir} with ${environmentType} environment`);
   } catch (err) {
     logger.error(`Error starting Docker Compose environment: ${err.message}`);
