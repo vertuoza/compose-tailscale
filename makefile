@@ -32,8 +32,9 @@ sops-encrypt:
 # Decrypt .env files using Docker container
 sops-decrypt:
 	@echo "Decrypting .env files using Docker container..."
-	$(call run_sops,decrypt --input-type=binary --output-type=binary .env.enc > .env)
-	$(call run_sops,decrypt --input-type=binary --output-type=binary vertuoza-compose/.env.enc > vertuoza-compose/.env)
+	@OUTPUT=$${OUTPUT:-.env}
+	$(call run_sops,decrypt --input-type=binary --output-type=binary .env.enc > $$OUTPUT)
+	$(call run_sops,decrypt --input-type=binary --output-type=binary vertuoza-compose/.env.enc > vertuoza-compose/$$OUTPUT)
 	@docker stop sops > /dev/null
 
 docker-start:
