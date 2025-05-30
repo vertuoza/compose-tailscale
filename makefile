@@ -39,9 +39,14 @@ sops-decrypt:
 docker-start:
 	docker compose pull
 	docker compose up -d
+	$(MAKE) update-tailscale-ip
 
 docker-stop:
 	docker compose down
+
+# Update Tailscale IP in .env file
+update-tailscale-ip:
+	@./scripts/update-tailscale-ip.sh
 
 # Help target
 help:
@@ -49,12 +54,13 @@ help:
 	@echo "  default          - Decrypt files and start services"
 	@echo "  sops-encrypt     - Encrypt .env files"
 	@echo "  sops-decrypt     - Decrypt .env files"
-	@echo "  docker-start     - Start Docker services"
+	@echo "  docker-start     - Start Docker services and update Tailscale IP"
 	@echo "  docker-stop      - Stop Docker services"
+	@echo "  update-tailscale-ip - Update Tailscale IP in .env file"
 	@echo "  down             - Alias for docker-stop"
 	@echo "  help             - Show this help message"
 	@echo ""
 	@echo "Note: SOPS commands will use existing 'sops' container if available,"
 	@echo "      otherwise will run the 'sops' image from registry."
 
-.PHONY: default down sops-encrypt sops-decrypt docker-start docker-stop help
+.PHONY: default down sops-encrypt sops-decrypt docker-start docker-stop update-tailscale-ip help
