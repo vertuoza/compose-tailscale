@@ -51,6 +51,10 @@
           "Proxy": "http://electronic-invoicing",
           "StripPrefix": true
         },
+        "/accounting-invoicing/": {
+          "Proxy": "http://accounting-invoicing",
+          "StripPrefix": true
+        },
         "/": {
           "Proxy": "http://vertuosoft"
         }
