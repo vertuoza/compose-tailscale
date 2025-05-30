@@ -566,6 +566,7 @@ services:
       - OTEL_SERVICE_NAME=vertuoza/vertuo-soft
       - OTEL_SDK_DISABLED=false
       - OTEL_PHP_DISABLED_INSTRUMENTATIONS=none
+      - ALLOWED_IMPERSONATION_IPS=${ALLOWED_IMPERSONATION_IPS}
     depends_on:
       mysql:
           condition: service_healthy
