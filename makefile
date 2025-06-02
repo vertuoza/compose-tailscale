@@ -1,40 +1,25 @@
-# SOPS Docker image name
-SOPS_IMAGE = ghcr.io/vertuoza/tools/sops:latest
-GCP_KMS = projects/vertuoza-qa/locations/global/keyRings/sops/cryptoKeys/sops-key
+include sops.mk
 
-default: sops-decrypt docker-start
+sops.mk:
+	@echo "Downloading sops.mk..."
+	@mkdir -p sops_tmp
+	@cd sops_tmp && \
+		git init && \
+		git remote add origin git@github.com:vertuoza/vertuo-actions.git && \
+		git config core.sparseCheckout true && \
+		echo "sops/Makefile" >> .git/info/sparse-checkout && \
+		git pull origin feature/shared-makefile && \
+		cp sops/Makefile ../sops.mk && \
+		cd .. && rm -rf sops_tmp
 
-down: docker-stop
-
-# Function to run SOPS command - checks for existing container first
-define run_sops
-	@if docker ps -a --format "table {{.Names}}" | grep -qE "^sops$$"; then \
-		echo "Using existing 'sops' container..."; \
-	else \
-		echo "Running 'sops' image..."; \
-		docker run \
-			-v .:/workspace \
-			-w /workspace \
-			--name=sops \
-			-it $(SOPS_IMAGE) auth; \
-	fi; \
-	docker start sops > /dev/null; \
-	docker exec -it sops sops $(1);
-endef
-
-# Encrypt .env files using Docker container
-sops-encrypt:
-	@echo "Encrypting .env files using Docker container..."
-	$(call run_sops,encrypt --input-type=binary --output-type=binary --gcp-kms $(GCP_KMS) .env > .env.enc)
-	$(call run_sops,encrypt --input-type=binary --output-type=binary --gcp-kms $(GCP_KMS) vertuoza-compose/.env > vertuoza-compose/.env.enc)
+sops-clean: shared-sops-clean
+sops-encrypt: shared-sops-encrypt
+	@echo "Encrypting vertuoza-compose/.env files using Docker container..."
+	$(call run_sops,encrypt --input-type binary --output-type json --gcp-kms $(GCP_KMS) vertuoza-compose/.env > vertuoza-compose/.env.encrypted)
 	@docker stop sops > /dev/null
-
-# Decrypt .env files using Docker container
-sops-decrypt:
-	@echo "Decrypting .env files using Docker container..."
-	@OUTPUT=$${OUTPUT:-.env}
-	$(call run_sops,decrypt --input-type=binary --output-type=binary .env.enc > $$OUTPUT)
-	$(call run_sops,decrypt --input-type=binary --output-type=binary vertuoza-compose/.env.enc > vertuoza-compose/$$OUTPUT)
+sops-decrypt: shared-sops-decrypt
+	@echo "Decrypting vertuoza-compose/.env files using Docker container..."
+	$(call run_sops,decrypt --input-type json --output-type binary vertuoza-compose/.env.encrypted > vertuoza-compose/$$OUTPUT)
 	@docker stop sops > /dev/null
 
 docker-start:
