@@ -1,0 +1,5 @@
+services:
+  client-space:
+    platform: 'linux/arm64'
+    image: client-space:latest
+    pull_policy: 'never'

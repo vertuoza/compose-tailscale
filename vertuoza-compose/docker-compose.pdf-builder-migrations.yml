@@ -1,0 +1,5 @@
+services:
+  pdf-builder-migrations:
+    platform: 'linux/arm64'
+    image: pdf-builder-migrations:latest
+    pull_policy: 'never'

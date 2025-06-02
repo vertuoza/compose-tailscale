@@ -1,0 +1,5 @@
+services:
+  auth:
+    platform: 'linux/arm64'
+    image: vertuo-auth:latest
+    pull_policy: 'never'

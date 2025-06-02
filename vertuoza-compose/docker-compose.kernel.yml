@@ -1,0 +1,5 @@
+services:
+  kernel:
+    platform: 'linux/arm64'
+    image: kernel:latest
+    pull_policy: 'never'

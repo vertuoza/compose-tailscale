@@ -1,0 +1,5 @@
+services:
+  electronic-invoicing-migrations:
+    platform: 'linux/arm64'
+    image: electronic-invoicing-migrations:latest
+    pull_policy: 'never'

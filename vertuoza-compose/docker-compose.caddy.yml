@@ -1,0 +1,49 @@
+services:
+  # Override tailscale service to prevent it from running
+  tailscale:
+    platform: 'linux/arm64'
+    image: hello-world:latest
+    restart: "no"
+    command: ["echo", "Tailscale disabled - using Caddy instead"]
+    deploy:
+      replicas: 0
+    pull_policy: 'never'
+
+  # Caddy reverse proxy service
+  caddy:
+    platform: 'linux/arm64'
+    image: caddy:2-alpine:latest
+    container_name: caddy-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ${COMPOSE_PROJECT_ROOT:-${PWD}/..}/vertuoza-compose/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - tailscale-subdomain-network
+    depends_on:
+      - kernel
+      - identity
+      - auth
+      - work
+      - pdf-builder
+      - ai
+      - ai-php
+      - gateway
+      - client-space
+      - planning
+      - electronic-invoicing
+      - vertuosoft
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    pull_policy: 'never'
+
+volumes:
+  caddy_data:
+    driver: local
+  caddy_config:
+    driver: local

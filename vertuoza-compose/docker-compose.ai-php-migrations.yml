@@ -1,0 +1,5 @@
+services:
+  ai-php-migrations:
+    platform: 'linux/arm64'
+    image: vertuo-ai-php-migrations:latest
+    pull_policy: 'never'

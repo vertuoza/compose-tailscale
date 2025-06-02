@@ -1,0 +1,5 @@
+services:
+  ai:
+    platform: 'linux/arm64'
+    image: vertuo-ai:latest
+    pull_policy: 'never'

@@ -1,0 +1,5 @@
+services:
+  ai-migrations:
+    platform: 'linux/arm64'
+    image: vertuo-ai-migrations:latest
+    pull_policy: 'never'

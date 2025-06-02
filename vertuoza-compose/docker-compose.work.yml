@@ -1,0 +1,5 @@
+services:
+  work:
+    platform: 'linux/arm64'
+    image: vertuo-work:latest
+    pull_policy: 'never'

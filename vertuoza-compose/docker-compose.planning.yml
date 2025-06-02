@@ -1,0 +1,5 @@
+services:
+  planning:
+    platform: 'linux/arm64'
+    image: webapp:latest
+    pull_policy: 'never'

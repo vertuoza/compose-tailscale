@@ -1,0 +1,5 @@
+services:
+  electronic-invoicing:
+    platform: 'linux/arm64'
+    image: electronic-invoicing:latest
+    pull_policy: 'never'

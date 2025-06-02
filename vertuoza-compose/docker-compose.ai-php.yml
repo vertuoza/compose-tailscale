@@ -1,0 +1,5 @@
+services:
+  ai-php:
+    platform: 'linux/arm64'
+    image: vertuo-ai-php:latest
+    pull_policy: 'never'

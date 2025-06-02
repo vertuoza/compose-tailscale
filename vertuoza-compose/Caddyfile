@@ -1,0 +1,70 @@
+# Handle localhost on HTTP (no redirect for localhost)
+localhost:80 {
+    # Kernel service
+    handle_path /kernel/* {
+        reverse_proxy kernel:80
+    }
+
+    # Identity service (with trailing slash)
+    handle_path /identity/* {
+        reverse_proxy identity:80
+    }
+
+    # Identity service (without trailing slash)
+    handle /identity {
+        reverse_proxy identity:80
+    }
+
+    # Auth service
+    handle_path /auth/* {
+        reverse_proxy auth:80
+    }
+
+    # Work service
+    handle_path /work/* {
+        reverse_proxy work:80
+    }
+
+    # PDF Builder service
+    handle_path /pdf-builder/* {
+        reverse_proxy pdf-builder:4000
+    }
+
+    # AI service
+    handle_path /ai/* {
+        reverse_proxy ai:4000
+    }
+
+    # AI PHP service
+    handle_path /ai-php/* {
+        reverse_proxy ai-php:80
+    }
+
+    # Gateway service
+    handle_path /gateway/* {
+        reverse_proxy gateway:80
+    }
+    handle_path /gateway {
+        reverse_proxy gateway:80
+    }
+
+    # Client Space service
+    handle_path /client-space/* {
+        reverse_proxy client-space:80
+    }
+
+    # Planning service
+    handle_path /plannings/* {
+        reverse_proxy planning:80
+    }
+
+    # Electronic Invoicing service
+    handle_path /electronic-invoicing/* {
+        reverse_proxy electronic-invoicing:80
+    }
+
+    # Default handler for root - VertuoSoft
+    handle {
+        reverse_proxy vertuosoft:80
+    }
+}

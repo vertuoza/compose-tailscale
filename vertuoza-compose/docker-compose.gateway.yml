@@ -1,0 +1,5 @@
+services:
+  gateway:
+    platform: 'linux/arm64'
+    image: api-gateway:latest
+    pull_policy: 'never'

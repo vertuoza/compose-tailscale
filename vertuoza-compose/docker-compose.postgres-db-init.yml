@@ -1,0 +1,5 @@
+services:
+  postgres-db-init:
+    platform: 'linux/arm64'
+    image: postgres:latest
+    pull_policy: 'never'

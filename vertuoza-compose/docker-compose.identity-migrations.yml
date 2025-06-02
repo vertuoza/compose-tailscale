@@ -1,0 +1,5 @@
+services:
+  identity-migrations:
+    platform: 'linux/arm64'
+    image: vertuo-identity:latest
+    pull_policy: 'never'
