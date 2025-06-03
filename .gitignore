@@ -3,8 +3,8 @@ node_modules/
 *.mk
 
 # Environment variables
-.env
-!.env.enc
+.env*
+!.env.encrypted
 
 # Logs
 logs/

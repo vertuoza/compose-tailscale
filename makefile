@@ -8,7 +8,7 @@ sops.mk:
 		git remote add origin git@github.com:vertuoza/vertuo-actions.git && \
 		git config core.sparseCheckout true && \
 		echo "sops/Makefile" >> .git/info/sparse-checkout && \
-		git pull origin feature/shared-makefile && \
+		git pull origin main && \
 		cp sops/Makefile ../sops.mk && \
 		cd .. && rm -rf sops_tmp
 
@@ -19,7 +19,7 @@ sops-encrypt: shared-sops-encrypt
 	@docker stop sops > /dev/null
 sops-decrypt: shared-sops-decrypt
 	@echo "Decrypting vertuoza-compose/.env files using Docker container..."
-	$(call run_sops,decrypt --input-type json --output-type binary vertuoza-compose/.env.encrypted > vertuoza-compose/$$OUTPUT)
+	$(call run_sops,decrypt --input-type json --output-type binary vertuoza-compose/.env.encrypted > vertuoza-compose/.env)
 	@docker stop sops > /dev/null
 
 docker-start:
