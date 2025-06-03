@@ -19,7 +19,7 @@ sops-encrypt: shared-sops-encrypt
 	@docker stop sops > /dev/null
 sops-decrypt: shared-sops-decrypt
 	@echo "Decrypting vertuoza-compose/.env files using Docker container..."
-	$(call run_sops,decrypt --input-type json --output-type binary vertuoza-compose/.env.encrypted > vertuoza-compose/$$OUTPUT)
+	$(call run_sops,decrypt --input-type json --output-type binary vertuoza-compose/.env.encrypted > vertuoza-compose/.env)
 	@docker stop sops > /dev/null
 
 docker-start:
