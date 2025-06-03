@@ -8,7 +8,7 @@ sops.mk:
 		git remote add origin git@github.com:vertuoza/vertuo-actions.git && \
 		git config core.sparseCheckout true && \
 		echo "sops/Makefile" >> .git/info/sparse-checkout && \
-		git pull origin feature/shared-makefile && \
+		git pull origin main && \
 		cp sops/Makefile ../sops.mk && \
 		cd .. && rm -rf sops_tmp
 
