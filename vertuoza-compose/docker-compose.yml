@@ -103,7 +103,6 @@ services:
       - TESTO_API_URL=${TESTO_API_URL}
       - XDEBUG_MODE=on
       - XDEBUG_PORT=9004
-      - DISABLE_HEALTHCHECK=true
     depends_on:
       kernel-migrations:
         condition: service_completed_successfully
@@ -281,7 +280,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/pdf_builder
       - GRAPHQL_SANDBOX=true
       - CORS_ORIGIN=${APP_URL}
@@ -313,7 +312,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 2048M
 
   pdf-builder-migrations:
     platform: linux/amd64
@@ -402,7 +401,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/vertuo_ai
       - GRAPHQL_SANDBOX=true
       - CORS_ORIGIN=${APP_URL}
@@ -618,9 +617,73 @@ services:
       mysql:
         condition: service_healthy
 
+  accounting-invoicing:
+    image: ghcr.io/vertuoza/vertuo-backend-php/services/accounting-invoicing:${ACCOUNTING_INVOICING_VERSION:-latest}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - APP_ENV=local
+      - APP_BASE_DOMAIN=vertuolocal.com
+      - PORT=80
+      - MODE=DEVELOPMENT
+      - LOG_ENABLED=true
+      - LOG_LEVEL=debug
+      - SECURE=true
+      - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
+      - SANDBOX_ACTIVE=true
+      - MEMORY_LIMIT=1024M
+      - GATEWAY_URL=${GATEWAY_URL}
+      - SERVICE_URL=${ACCOUNTING_INVOICING_URL}
+      - KERNEL_URL=${KERNEL_URL}
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=accounting-invoicing
+      - DB_USERNAME=accounting-invoicing
+      - DB_PASSWORD=accounting-invoicing_password
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
+      - GCP_BUCKET_CREDENTIALS=${GCP_BUCKET_CREDENTIALS}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS_ACCOUNTING_INVOICING}
+      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION:-europe-west1}
+      - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
+      # Switch for using the OpenTelemetry SDK.
+      # You can override all settings using the .env file.
+      - OTEL_PHP_AUTOLOAD_ENABLED=${OTEL_PHP_AUTOLOAD_ENABLED:-false}
+      - OTEL_PHP_FIBERS_ENABLED=${OTEL_PHP_FIBERS_ENABLED:-false}
+      - OTEL_PHP_DISABLED_INSTRUMENTATIONS=${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-all}
+      - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
+      # Type of exporter used by OpenTelemetry SDK.
+      # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#exporter-selection
+      # Default for development: console.
+      # Default for production: otlp.
+      - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
+      - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
+      - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
+      # OpenTelemetry Collector URL.
+      # You can use http://host.docker.internal:4317 if you have a running OpenTelemetry collector locally.
+      # Can be empty if you don't use "otlp" exporter.
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      # OpenTelemetry Collector protocol.
+      - OTEL_EXPORTER_OTLP_PROTOCOL=${OTEL_EXPORTER_OTLP_PROTOCOL:-grpc}
+      # Service name reported in OpenTelemetry traces.
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-vertuoza/accounting-invoicing}
+      - XDEBUG_PORT=${XDEBUG_PORT:-9003}
+      # Google Cloud Task Configuration
+      - ACCOUNTING_SYNC_INTERNAL_QUEUE_ID=${ACCOUNTING_SYNC_INTERNAL_QUEUE_ID:-accounting-invoicing-internal}
+      - CHIFT_ACCOUNTING_URL=${CHIFT_ACCOUNTING_URL}
+      - CHIFT_ACCOUNT_ID=${CHIFT_ACCOUNT_ID}
+      - CHIFT_CLIENT_ID=${CHIFT_CLIENT_ID}
+      - CHIFT_CLIENT_SECRET=${CHIFT_CLIENT_SECRET}
+      - DASHBOARD_ENABLED=true
+    networks:
+      - tailscale-subdomain-network
+
   gateway:
     platform: linux/amd64
-    image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/api-gateway:latest
+    image: vertuo-gateway-server:latest
+    pull_policy: never
+    # image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/api-gateway:latest
+    # image: europe-west1-docker.pkg.dev/vertuoza-qa/vertuoza/api-gateway:fe94968-20250424201304
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -656,15 +719,22 @@ services:
     networks:
       - tailscale-subdomain-network
     depends_on:
-      - kernel
-      - work
-      - ai
-      - pdf-builder
-      - client-space
-      - identity
-      - electronic-invoicing
-      # - accounting-invoicing
-      - ai-php
+      kernel:
+        condition: service_healthy
+      work:
+        condition: service_healthy
+      ai:
+        condition: service_healthy
+      pdf-builder:
+        condition: service_healthy
+      client-space:
+        condition: service_healthy
+      identity:
+        condition: service_healthy
+      electronic-invoicing:
+        condition: service_healthy
+      ai-php:
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -888,62 +958,6 @@ services:
       resources:
         limits:
           memory: 256M
-
-  # accounting-invoicing:
-  #   image: ghcr.io/vertuoza/vertuo-backend-php/services/accounting-invoicing:${ACCOUNTING_INVOICING_VERSION:-latest}
-  #   extra_hosts:
-  #     - "host.docker.internal:host-gateway"
-  #   environment:
-  #     - APP_ENV=local
-  #     - APP_BASE_DOMAIN=vertuolocal.com
-  #     - PORT=80
-  #     - MODE=DEVELOPMENT
-  #     - LOG_ENABLED=true
-  #     - LOG_LEVEL=debug
-  #     - SECURE=true
-  #     - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
-  #     - SANDBOX_ACTIVE=true
-  #     - MEMORY_LIMIT=1024M
-  #     - GATEWAY_URL=${GATEWAY_URL}
-  #     - SERVICE_URL=${ACCOUNTING_INVOICING_URL}
-  #     - KERNEL_URL=${KERNEL_URL}
-  #     - DB_HOST=mysql
-  #     - DB_PORT=3306
-  #     - DB_DATABASE=accounting-invoicing
-  #     - DB_USERNAME=accounting-invoicing
-  #     - DB_PASSWORD=accounting-invoicing_password
-  #     - INTERNAL_SECRET=${INTERNAL_SECRET}
-  #     - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
-  #     - GCP_BUCKET_CREDENTIALS=${GCP_BUCKET_CREDENTIALS}
-  #     - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS_ACCOUNTING_INVOICING}
-  #     - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION:-europe-west1}
-  #     - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
-  #     # Switch for using the OpenTelemetry SDK.
-  #     # You can override all settings using the .env file.
-  #     - OTEL_PHP_AUTOLOAD_ENABLED=${OTEL_PHP_AUTOLOAD_ENABLED:-false}
-  #     - OTEL_PHP_FIBERS_ENABLED=${OTEL_PHP_FIBERS_ENABLED:-false}
-  #     - OTEL_PHP_DISABLED_INSTRUMENTATIONS=${OTEL_PHP_DISABLED_INSTRUMENTATIONS:-all}
-  #     - OTEL_SDK_DISABLED=${OTEL_SDK_DISABLED:-true}
-  #     # Type of exporter used by OpenTelemetry SDK.
-  #     # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#exporter-selection
-  #     # Default for development: console.
-  #     # Default for production: otlp.
-  #     - OTEL_LOGS_EXPORTER=${OTEL_LOGS_EXPORTER:-console}
-  #     - OTEL_TRACES_EXPORTER=${OTEL_TRACES_EXPORTER:-console}
-  #     - OTEL_METRICS_EXPORTER=${OTEL_METRICS_EXPORTER:-console}
-  #     # OpenTelemetry Collector URL.
-  #     # You can use http://host.docker.internal:4317 if you have a running OpenTelemetry collector locally.
-  #     # Can be empty if you don't use "otlp" exporter.
-  #     - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-}
-  #     # OpenTelemetry Collector protocol.
-  #     - OTEL_EXPORTER_OTLP_PROTOCOL=${OTEL_EXPORTER_OTLP_PROTOCOL:-grpc}
-  #     # Service name reported in OpenTelemetry traces.
-  #     - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-vertuoza/accounting-invoicing}
-  #     - XDEBUG_PORT=${XDEBUG_PORT:-9003}
-  #     # Google Cloud Task Configuration
-  #     - ACCOUNTING_SYNC_INTERNAL_QUEUE_ID=${ACCOUNTING_SYNC_INTERNAL_QUEUE_ID:-accounting-invoicing-internal}
-  #   networks:
-  #     - tailscale-subdomain-network
 
 networks:
   tailscale-subdomain-network:
