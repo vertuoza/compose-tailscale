@@ -2,8 +2,8 @@ services:
   # Tailscale container for networking
   tailscale:
     image: tailscale/tailscale:latest
-    container_name: tailscale-subdomain-ts
-    hostname: tailscale-subdomain
+    container_name: ${TAILSCALE_SUBDOMAIN}-ts
+    hostname: ${TAILSCALE_SUBDOMAIN}
     environment:
       - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
       - "TS_EXTRA_ARGS=--advertise-tags=tag:container --reset"
@@ -33,7 +33,6 @@ services:
     environment:
       - APP_ENV=local
       - APP_BASE_DOMAIN=${APP_URL}
-      # - PORT=80
       - DB_HOST=mysql
       - DB_PORT=3306
       - DB_DATABASE=vertuoza_dvp
@@ -86,7 +85,7 @@ services:
       - ELECTRONIC_INVOICING_SERVICE_URL=${ELECTRONIC_INVOICING_URL}
       - GATEWAY_URL=${GATEWAY_URL}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS_KERNEL}
-      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION:-europe-west1}
+      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION}
       - THIRD_PARTY_JWT_AUDIENCE=${THIRD_PARTY_JWT_AUDIENCE}
       - THIRD_PARTY_JWT_EXP=${THIRD_PARTY_JWT_EXP}
       - THIRD_PARTY_JWT_ISSUER=${THIRD_PARTY_JWT_ISSUER}
@@ -461,7 +460,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       - APP_ENV=local
-      - APP_BASE_DOMAIN=tailscale-subdomain-nathan.tailf31c84.ts.net
+      - APP_BASE_DOMAIN=${BASE_URL}
       - PORT=80
       - MODE=DEVELOPMENT
       - LOG_ENABLED=true
@@ -482,7 +481,7 @@ services:
       - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
       - GCP_BUCKET_CREDENTIALS=${GCP_BUCKET_CREDENTIALS}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS_ELECTRONIC_INVOICING:-}
-      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION:-europe-west1}
+      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION}
       - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
       # Switch for using the OpenTelemetry SDK.
       # You can override all settings using the .env file.
@@ -544,7 +543,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       - APP_ENV=local
-      - APP_BASE_DOMAIN=tailscale-subdomain-nathan.tailf31c84.ts.net
+      - APP_BASE_DOMAIN=${BASE_URL}
       - APP_URL=${APP_URL}
       - HASH_SECRET=${HASH_SECRET}
       - PORT=80
@@ -591,7 +590,7 @@ services:
       - GCP_BUCKET_CREDENTIALS=${GCP_CREDENTIALS:-}
       - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS_VERTUO_AI}
-      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION:-europe-west1}
+      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION}
       # OpenAI
       - OPEN_AI_SECRET=${OPEN_AI_SECRET:-}
       - OPEN_AI_OFFER_EXAMPLE_FILES_URL=${OPEN_AI_OFFER_EXAMPLE_FILES_URL:-["https://storage.googleapis.com/vertuoza-testing/tonioai/prompt/example1.json","https://storage.googleapis.com/vertuoza-testing/tonioai/prompt/example2.json","https://storage.googleapis.com/vertuoza-testing/tonioai/prompt/example3.json"]}
@@ -644,7 +643,7 @@ services:
       - GCP_BUCKET_PREFIX=${GCP_BUCKET_PREFIX}
       - GCP_BUCKET_CREDENTIALS=${GCP_BUCKET_CREDENTIALS}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS_ACCOUNTING_INVOICING}
-      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION:-europe-west1}
+      - GOOGLE_CLOUD_TASK_LOCATION=${GOOGLE_CLOUD_TASK_LOCATION}
       - GCP_BUCKET_NAME=${GCP_BUCKET_NAME}
       # Switch for using the OpenTelemetry SDK.
       # You can override all settings using the .env file.
