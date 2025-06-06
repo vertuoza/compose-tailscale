@@ -1,5 +1,6 @@
 services:
   work:
     platform: 'linux/arm64'
-    image: vertuo-work:latest
-    pull_policy: 'never'
+    build:
+      context: ${VERTUO_WORK_PATH:-../../../vertuo-work}
+      dockerfile: Dockerfile

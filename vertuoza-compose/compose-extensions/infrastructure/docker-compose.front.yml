@@ -1,5 +1,6 @@
 services:
   front:
     platform: 'linux/arm64'
-    image: vertuo-front-front-end:latest
-    pull_policy: 'never'
+    build:
+      context: ${VERTUO_FRONT_PATH:-../../../vertuo-front}
+      dockerfile: Dockerfile

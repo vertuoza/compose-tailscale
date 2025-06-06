@@ -1,5 +1,6 @@
 services:
   ai:
     platform: 'linux/arm64'
-    image: vertuo-ai:latest
-    pull_policy: 'never'
+    build:
+      context: ${VERTUO_AI_PATH:-../../../vertuo-ai}
+      dockerfile: Dockerfile

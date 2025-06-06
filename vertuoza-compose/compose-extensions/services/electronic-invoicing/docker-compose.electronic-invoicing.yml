@@ -1,5 +1,6 @@
 services:
   electronic-invoicing:
     platform: 'linux/arm64'
-    image: electronic-invoicing:latest
-    pull_policy: 'never'
+    build:
+      context: ${VERTUO_BACKEND_PHP_PATH:-../../../vertuo-backend-php}
+      dockerfile: packages/services/electronic-invoicing/Dockerfile

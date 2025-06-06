@@ -1,5 +1,6 @@
 services:
   pdf-builder:
     platform: 'linux/arm64'
-    image: pdf-builder:latest
-    pull_policy: 'never'
+    build:
+      context: ${PDF_BUILDER_PATH:-../../../pdf-builder}
+      dockerfile: Dockerfile

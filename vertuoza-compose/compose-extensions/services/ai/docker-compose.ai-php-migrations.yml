@@ -1,5 +1,7 @@
 services:
   ai-php-migrations:
     platform: 'linux/arm64'
-    image: vertuo-ai-php-migrations:latest
-    pull_policy: 'never'
+    build:
+      context: ${VERTUO_BACKEND_PHP_PATH:-../../../vertuo-backend-php}
+      dockerfile: packages/services/vertuo-ai/Dockerfile
+      target: migrations

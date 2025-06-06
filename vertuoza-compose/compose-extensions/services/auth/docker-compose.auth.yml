@@ -1,5 +1,6 @@
 services:
   auth:
     platform: 'linux/arm64'
-    image: vertuo-auth:latest
-    pull_policy: 'never'
+    build:
+      context: ${VERTUO_AUTH_PATH:-../../../vertuo-auth}
+      dockerfile: Dockerfile
