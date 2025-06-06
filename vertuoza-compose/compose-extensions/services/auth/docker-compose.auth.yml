@@ -1,6 +1,0 @@
-services:
-  auth:
-    platform: 'linux/arm64'
-    build:
-      context: ${VERTUO_AUTH_PATH:-../../../vertuo-auth}
-      dockerfile: Dockerfile

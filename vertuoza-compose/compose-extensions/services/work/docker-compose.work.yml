@@ -1,6 +1,0 @@
-services:
-  work:
-    platform: 'linux/arm64'
-    build:
-      context: ${VERTUO_WORK_PATH:-../../../vertuo-work}
-      dockerfile: Dockerfile

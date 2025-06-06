@@ -1,7 +1,0 @@
-services:
-  ai-migrations:
-    platform: 'linux/arm64'
-    build:
-      context: ${VERTUO_AI_PATH:-../../../vertuo-ai}
-      dockerfile: Dockerfile
-      target: migrations

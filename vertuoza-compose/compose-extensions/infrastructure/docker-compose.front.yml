@@ -1,6 +1,0 @@
-services:
-  front:
-    platform: 'linux/arm64'
-    build:
-      context: ${VERTUO_FRONT_PATH:-../../../vertuo-front}
-      dockerfile: Dockerfile

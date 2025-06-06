@@ -1,5 +1,0 @@
-services:
-  mysql:
-    platform: 'linux/arm64'
-    image: vertuoza-mysql:latest
-    pull_policy: 'never'

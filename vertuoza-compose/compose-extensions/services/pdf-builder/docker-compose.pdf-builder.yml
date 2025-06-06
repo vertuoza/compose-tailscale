@@ -1,6 +1,0 @@
-services:
-  pdf-builder:
-    platform: 'linux/arm64'
-    build:
-      context: ${PDF_BUILDER_PATH:-../../../pdf-builder}
-      dockerfile: Dockerfile

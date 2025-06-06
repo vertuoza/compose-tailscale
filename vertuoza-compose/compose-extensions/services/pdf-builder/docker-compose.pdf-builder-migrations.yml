@@ -1,7 +1,0 @@
-services:
-  pdf-builder-migrations:
-    platform: 'linux/arm64'
-    build:
-      context: ${PDF_BUILDER_PATH:-../../../pdf-builder}
-      dockerfile: Dockerfile
-      target: migrations

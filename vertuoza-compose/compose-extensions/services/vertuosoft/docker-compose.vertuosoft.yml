@@ -1,6 +1,0 @@
-services:
-  vertuosoft:
-    platform: 'linux/arm64'
-    build:
-      context: ${VERTUO_SOFT_PATH:-../../../vertuo-soft}
-      dockerfile: Dockerfile

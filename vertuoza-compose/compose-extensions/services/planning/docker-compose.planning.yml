@@ -1,6 +1,0 @@
-services:
-  planning:
-    platform: 'linux/arm64'
-    build:
-      context: ${VERTUO_PLANNING_PATH:-../../../vertuo-planning}
-      dockerfile: Dockerfile

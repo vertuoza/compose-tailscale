@@ -1,6 +1,0 @@
-services:
-  ai-php:
-    platform: 'linux/arm64'
-    build:
-      context: ${VERTUO_BACKEND_PHP_PATH:-../../../vertuo-backend-php}
-      dockerfile: packages/services/vertuo-ai/Dockerfile

@@ -1,7 +1,0 @@
-services:
-  work-migrations:
-    platform: 'linux/arm64'
-    build:
-      context: ${VERTUO_WORK_PATH:-../../../vertuo-work}
-      dockerfile: Dockerfile
-      target: migrations

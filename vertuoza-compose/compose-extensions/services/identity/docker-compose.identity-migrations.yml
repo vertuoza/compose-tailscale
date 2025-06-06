@@ -1,7 +1,0 @@
-services:
-  identity-migrations:
-    platform: 'linux/arm64'
-    build:
-      context: ${VERTUO_IDENTITY_PATH:-../../../vertuo-identity}
-      dockerfile: Dockerfile
-      target: migrations
