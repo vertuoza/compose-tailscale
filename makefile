@@ -13,11 +13,7 @@ sops.mk:
 		cd .. && rm -rf sops_tmp
 
 sops-encrypt: shared-sops-encrypt
-	@echo "Encrypting vertuoza-compose/.env files using Docker container..."
-	$(call run_sops,encrypt --input-type binary --output-type json --output vertuoza-compose/.env.encrypted --gcp-kms $(GCP_KMS) vertuoza-compose/.env)
 sops-decrypt: shared-sops-decrypt
-	@echo "Decrypting vertuoza-compose/.env files using Docker container..."
-	$(call run_sops,decrypt --input-type json --output-type binary --output vertuoza-compose/.env vertuoza-compose/.env.encrypted)
 
 docker-start:
 	docker compose pull
