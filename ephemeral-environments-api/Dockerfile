@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
 # Install Docker CLI, Docker Compose, and dependencies for Google Cloud SDK
-RUN apk add --no-cache docker docker-compose curl python3 py3-pip bash
+RUN apk add --no-cache docker docker-compose curl python3 py3-pip bash make
 
 # Install Google Cloud SDK
 RUN curl -sSL https://sdk.cloud.google.com > /tmp/gcl && \
