@@ -478,6 +478,7 @@ services:
 
       # Database
       - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/vertuo_ai
+      - MYSQL_DATABASE_URL=mysql://vertuo-ai:vertuo-ai_password@mysql:3306/vertuo-ai
 
       # Security
       - LEGACY_API_SECRET=${LEGACY_API_SECRET}

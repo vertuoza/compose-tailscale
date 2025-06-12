@@ -9,6 +9,7 @@ const { logger } = require('./utils/logger');
 const fileSystem = require('./utils/fileSystem');
 const { addEnvironmentTypeColumn } = require('./migrations/add_environment_type');
 const { updateEnvironmentSchema } = require('./migrations/update_environment_schema');
+const { fixMessageColumnLength } = require('./migrations/fix_message_column_length');
 
 // Load environment variables
 dotenv.config({ path: fileSystem.joinPath(__dirname, '../.env') });
@@ -63,6 +64,7 @@ async function startServer() {
     // Run migrations
     await addEnvironmentTypeColumn();
     await updateEnvironmentSchema();
+    await fixMessageColumnLength();
 
     // Start the server
     app.listen(PORT, '0.0.0.0', () => {
