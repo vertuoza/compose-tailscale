@@ -43,7 +43,7 @@ services:
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - VERTUO_FRONT_DOMAIN=${FRONT_URL}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=1024M
+      - MEMORY_LIMIT=512M
 
       # Database
       - DB_HOST=mysql
@@ -128,7 +128,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 512M
 
   kernel-migrations:
     platform: linux/amd64
@@ -148,6 +148,10 @@ services:
         condition: service_healthy
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   client-space:
     platform: linux/amd64
@@ -272,6 +276,10 @@ services:
         condition: service_healthy
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   auth:
     platform: linux/amd64
@@ -329,6 +337,7 @@ services:
       - GRAPHQL_SANDBOX=true
       - CORS_ORIGIN=${APP_URL}
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      - NODE_OPTIONS=--max-old-space-size=768
 
       # Database
       - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/pdf_builder
@@ -367,7 +376,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2048M
+          memory: 1024M
 
   pdf-builder-migrations:
     platform: linux/amd64
@@ -382,6 +391,10 @@ services:
         condition: service_completed_successfully
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   work:
     platform: linux/amd64
@@ -464,6 +477,10 @@ services:
         condition: service_healthy
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   ai:
     platform: linux/amd64
@@ -539,6 +556,10 @@ services:
         condition: service_completed_successfully
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   electronic-invoicing:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/electronic-invoicing:${ELECTRONIC_INVOICING_VERSION:-latest}
@@ -607,6 +628,10 @@ services:
     depends_on:
       electronic-invoicing-migrations:
         condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   electronic-invoicing-migrations:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/electronic-invoicing-migrations:latest
@@ -625,6 +650,10 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   ai-php:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/vertuo-ai-php:${VERTUO_AI_PHP_VERSION:-latest}
@@ -691,6 +720,10 @@ services:
     depends_on:
       ai-php-migrations:
         condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   ai-php-migrations:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/vertuo-ai-php-migrations:latest
@@ -709,6 +742,10 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   accounting-invoicing:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/accounting-invoicing:${ACCOUNTING_INVOICING_VERSION:-latest}
@@ -775,6 +812,10 @@ services:
       - DASHBOARD_ENABLED=true
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   gateway:
     platform: linux/amd64
@@ -943,7 +984,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 512M
 
   front:
     platform: linux/amd64
