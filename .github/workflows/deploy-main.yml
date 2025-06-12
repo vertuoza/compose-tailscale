@@ -2,7 +2,7 @@ name: Deploy to Remote Server
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   deploy:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Fetch all history for proper rsync
+          fetch-depth: 0 # Fetch all history for proper rsync
 
       - name: Set up Tailscale
         uses: tailscale/github-action@v3
@@ -23,14 +23,14 @@ jobs:
           tags: tag:ci
 
       - name: Wait for Tailscale to connect
-        run: sleep 10  # Give Tailscale a moment to establish connection
+        run: sleep 10 # Give Tailscale a moment to establish connection
 
       - name: Transfer repository to remote server
         env:
           REMOTE_HOST: ${{ vars.REMOTE_HOST }}
         run: |
           # Create the destination directory if it doesn't exist
-          ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "mkdir -p ~/compose-tailscale"
+          ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "mkdir -p ~/ephemeral-environments"
 
           # Use rsync to transfer files, excluding .git and preserving specific directories
           rsync -az --delete --no-times --size-only \
@@ -39,7 +39,7 @@ jobs:
             --exclude='logs/**' \
             --exclude='state/**' \
             --exclude='*.env' \
-            ./ root@$REMOTE_HOST:~/compose-tailscale/
+            ./ root@$REMOTE_HOST:~/ephemeral-environments/
 
           echo "Repository transferred successfully"
 
@@ -48,6 +48,6 @@ jobs:
           REMOTE_HOST: ${{ vars.REMOTE_HOST }}
         run: |
           # Navigate to the API directory and rebuild
-          ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "cd ~/compose-tailscale && docker compose up -d --build"
+          ssh -o "StrictHostKeyChecking no" root@$REMOTE_HOST "cd ~/ephemeral-environments && docker compose up -d --build"
 
           echo "API rebuilt successfully"
