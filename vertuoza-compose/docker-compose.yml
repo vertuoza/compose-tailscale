@@ -25,6 +25,8 @@ services:
       resources:
         limits:
           memory: 256M
+        reservations:
+          memory: 64M
 
   kernel:
     platform: linux/amd64
@@ -43,7 +45,14 @@ services:
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - VERTUO_FRONT_DOMAIN=${FRONT_URL}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=1024M
+      - MEMORY_LIMIT=512M
+
+      # PHP Memory optimization settings
+      - PHP_MEMORY_LIMIT=512M
+      - PHP_OPCACHE_MEMORY_CONSUMPTION=64
+      - PHP_MAX_EXECUTION_TIME=60
+      - PHP_OPCACHE_ENABLE=1
+      - PHP_OPCACHE_VALIDATE_TIMESTAMPS=0
 
       # Database
       - DB_HOST=mysql
@@ -128,7 +137,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 512M
+        reservations:
+          memory: 256M
 
   kernel-migrations:
     platform: linux/amd64
@@ -148,6 +159,10 @@ services:
         condition: service_healthy
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   client-space:
     platform: linux/amd64
@@ -165,7 +180,7 @@ services:
       - SECURE=true
       - ALLOWED_DOMAINS=${APP_URL}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=256M
+      - MEMORY_LIMIT=128M
 
       # Security
       - THIRD_PARTY_JWT_PUBLIC_KEY=${CLIENT_SPACE_THIRD_PARTY_JWT_PUBLIC_KEY}
@@ -192,7 +207,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 128M
 
   identity:
     platform: linux/amd64
@@ -211,7 +226,7 @@ services:
       - PHP_SESSION_EXPIRATION=240
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=256M
+      - MEMORY_LIMIT=128M
 
       # Database
       - DB_HOST=mysql
@@ -272,6 +287,10 @@ services:
         condition: service_healthy
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   auth:
     platform: linux/amd64
@@ -290,7 +309,7 @@ services:
       - PHP_SESSION_EXPIRATION=240
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=512M
+      - MEMORY_LIMIT=128M
 
       # Security
       - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS}
@@ -316,7 +335,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 128M
 
   pdf-builder:
     platform: linux/amd64
@@ -329,6 +348,11 @@ services:
       - GRAPHQL_SANDBOX=true
       - CORS_ORIGIN=${APP_URL}
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+      # Memory optimization settings
+      - NODE_OPTIONS=--max-old-space-size=640
+      - UV_THREADPOOL_SIZE=4
+      - MALLOC_ARENA_MAX=2
 
       # Database
       - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/pdf_builder
@@ -367,7 +391,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2048M
+          memory: 1024M
 
   pdf-builder-migrations:
     platform: linux/amd64
@@ -382,6 +406,10 @@ services:
         condition: service_completed_successfully
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   work:
     platform: linux/amd64
@@ -400,7 +428,7 @@ services:
       - PHP_SESSION_EXPIRATION=240
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=256M
+      - MEMORY_LIMIT=128M
 
       # Database
       - DB_HOST=mysql
@@ -446,7 +474,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 128M
 
   work-migrations:
     platform: linux/amd64
@@ -464,6 +492,10 @@ services:
         condition: service_healthy
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   ai:
     platform: linux/amd64
@@ -475,6 +507,11 @@ services:
       - NODE_ENV=development
       - GRAPHQL_SANDBOX=true
       - CORS_ORIGIN=${APP_URL}
+
+      # Memory optimization settings
+      - NODE_OPTIONS=--max-old-space-size=192
+      - UV_THREADPOOL_SIZE=4
+      - MALLOC_ARENA_MAX=2
 
       # Database
       - DATABASE_URL=postgresql://vertuoza:vertuoza_password@postgres:5432/vertuo_ai
@@ -539,6 +576,10 @@ services:
         condition: service_completed_successfully
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   electronic-invoicing:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/electronic-invoicing:${ELECTRONIC_INVOICING_VERSION:-latest}
@@ -555,7 +596,7 @@ services:
       - SECURE=true
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=256M
+      - MEMORY_LIMIT=128M
 
       # Database
       - DB_HOST=mysql
@@ -607,6 +648,10 @@ services:
     depends_on:
       electronic-invoicing-migrations:
         condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   electronic-invoicing-migrations:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/electronic-invoicing-migrations:latest
@@ -625,6 +670,10 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   ai-php:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/vertuo-ai-php:${VERTUO_AI_PHP_VERSION:-latest}
@@ -642,7 +691,7 @@ services:
       - SECURE=true
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=256M
+      - MEMORY_LIMIT=128M
 
       # Database
       - DB_HOST=mysql
@@ -691,6 +740,10 @@ services:
     depends_on:
       ai-php-migrations:
         condition: service_completed_successfully
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   ai-php-migrations:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/vertuo-ai-php-migrations:latest
@@ -709,6 +762,10 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   accounting-invoicing:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/accounting-invoicing:${ACCOUNTING_INVOICING_VERSION:-latest}
@@ -725,7 +782,7 @@ services:
       - SECURE=true
       - ALLOWED_DOMAINS=${ALLOWED_DOMAINS}
       - SANDBOX_ACTIVE=true
-      - MEMORY_LIMIT=1024M
+      - MEMORY_LIMIT=128M
 
       # Database
       - DB_HOST=mysql
@@ -775,6 +832,10 @@ services:
       - DASHBOARD_ENABLED=true
     networks:
       - tailscale-subdomain-network
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   gateway:
     platform: linux/amd64
@@ -785,6 +846,11 @@ services:
       # App Config
       - MODE=development
       - FORK=1
+
+      # Memory optimization settings
+      - NODE_OPTIONS=--max-old-space-size=320
+      - UV_THREADPOOL_SIZE=4
+      - MALLOC_ARENA_MAX=2
 
       # Security
       - JWT_KERNEL_PRIVATE_KEY=${JWT_PRIVATE_KEY}
@@ -837,7 +903,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 448M
 
   vertuosoft:
     platform: linux/amd64
@@ -861,6 +927,13 @@ services:
       - QUEUE_CONNECTION=sync
       - MODE=DEPLOYED
       - ALLOWED_IMPERSONATION_IPS=${ALLOWED_IMPERSONATION_IPS}
+
+      # PHP Memory optimization settings
+      - PHP_MEMORY_LIMIT=128M
+      - PHP_OPCACHE_MEMORY_CONSUMPTION=32
+      - PHP_MAX_EXECUTION_TIME=60
+      - PHP_OPCACHE_ENABLE=1
+      - PHP_OPCACHE_VALIDATE_TIMESTAMPS=0
 
       # Database
       - DB_CONNECTION=mysql
@@ -943,7 +1016,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 256M
+        reservations:
+          memory: 128M
 
   front:
     platform: linux/amd64
@@ -954,6 +1029,11 @@ services:
       # App Config
       - NEXT_PUBLIC_APP_ENV=local
       - NEXT_PUBLIC_APP_URL=${APP_URL}
+
+      # Memory optimization settings
+      - NODE_OPTIONS=--max-old-space-size=192
+      - UV_THREADPOOL_SIZE=4
+      - MALLOC_ARENA_MAX=2
 
       # Security
       - LEGACY_API_SECRET=${LEGACY_API_SECRET}
@@ -987,7 +1067,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 256M
+        reservations:
+          memory: 128M
 
   planning:
     platform: linux/amd64
@@ -1007,18 +1089,31 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 128M
 
   # DATABASES
   mysql:
     image: ghcr.io/vertuoza/vertuo-backend-php/services/vertuoza-mysql:${VERTUOZA_MYSQL_VERSION:-latest}
     restart: always
+    environment:
+      # Memory optimization settings
+      - MYSQL_INNODB_BUFFER_POOL_SIZE=256M
+      - MYSQL_QUERY_CACHE_SIZE=16M
+      - MYSQL_MAX_CONNECTIONS=25
+      - MYSQL_INNODB_LOG_FILE_SIZE=64M
+      - MYSQL_INNODB_LOG_BUFFER_SIZE=16M
+      - MYSQL_KEY_BUFFER_SIZE=32M
+      - MYSQL_TABLE_OPEN_CACHE=400
+      - MYSQL_SORT_BUFFER_SIZE=2M
+      - MYSQL_READ_BUFFER_SIZE=1M
+      - MYSQL_READ_RND_BUFFER_SIZE=2M
+      - MYSQL_THREAD_CACHE_SIZE=4
     networks:
       - tailscale-subdomain-network
     deploy:
       resources:
         limits:
-          memory: 1024M
+          memory: 768M
     healthcheck:
       test:
         [
@@ -1042,6 +1137,15 @@ services:
       # Database
       - POSTGRES_USER=vertuoza
       - POSTGRES_PASSWORD=vertuoza_password
+      # Memory optimization settings
+      - POSTGRES_SHARED_BUFFERS=32MB
+      - POSTGRES_EFFECTIVE_CACHE_SIZE=64MB
+      - POSTGRES_WORK_MEM=2MB
+      - POSTGRES_MAINTENANCE_WORK_MEM=32MB
+      - POSTGRES_MAX_CONNECTIONS=25
+      - POSTGRES_RANDOM_PAGE_COST=1.1
+      - POSTGRES_CHECKPOINT_COMPLETION_TARGET=0.7
+      - POSTGRES_WAL_BUFFERS=16MB
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vertuoza -h localhost -p 5432"]
       interval: 20s
@@ -1052,7 +1156,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 256M
 
   postgres-db-init:
     image: postgres:${POSTGRES_VERSION:-15-alpine}
